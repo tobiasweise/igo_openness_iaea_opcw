@@ -1,0 +1,295 @@
+# Chapter 6
+
+```{r }
+library(extrafont)
+loadfonts()
+library(ggplot2)
+library(reshape2)
+library(grid)
+library(dplyr)
+```
+
+
+# Figure 1: Case study 1 mechanism ----
+
+```{r }
+library(DiagrammeR)
+nodes <-  create_nodes(nodes = c("visibility", "authority", "legit. challenges", "transparency", "dem. state demands", "Secretariat"), shape = c("circle", "circle", "circle", "rectangle", "circle", "diamond"), fontname = "Charis SIL", fixedsize = T, fontsize = 4, x = c(1, 1, 2, 4, 3, 3), y = c(6, 4, 5, 5, 6, 5), fillcolor = c("White", "White", "White", "WhiteSmoke", "White" , "White"), style = "filled")
+
+edges <-  create_edges(edge_from = c("visibility", "authority", "legit. challenges", "dem. state demands", "Secretariat"), edge_to = c("legit. challenges", "legit. challenges", "Secretariat", "Secretariat", "transparency"))
+
+graph <- create_graph(nodes_df = nodes, edges_df = edges, graph_attrs = c("layout = neato"))
+
+render_graph(graph)
+#graph.svg <- render_graph(graph, output = "SVG", width = 1800, height = 1600)
+#write(graph.svg, file = "ch6-mechan1.svg")
+```
+
+# Figure 2: IAEA in the Global News Media ----
+
+```{r}
+hl_transparency <- read.csv2('../data/iaea_newspaper_headlines_searcht.csv')
+
+plot.df <- melt(hl_transparency, id.vars = "Year")
+
+p1 <-  ggplot(plot.df) + geom_line(aes(x = Year, y = value, linetype = variable), size = 1) + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(0.5, "cm"), legend.key = element_blank()) + ylab("No. of Articles / No. of Hits") + xlab("Year") + theme(text=element_text(family="Charis SIL", size=12)) + scale_linetype_manual(name = "", values = c(1, 3), labels = c("IAEA headline articles", "Annual hits for transparency")) + annotate("text", x = 1986, y = 25, label = "Chernobyl", family="Charis SIL", size = 5, angle = 90) + annotate("text", x = 1994, y = 30, label = "PRK", family="Charis SIL", size = 5, angle = 90) + annotate("text", x = 2004, y = 90, label = "KOR, IRN", family="Charis SIL", size = 5, angle = 90) + annotate("text", x = 2003, y = 70, label = "IRQ", family="Charis SIL", size = 5, angle = 90) + annotate("text", x = 2007, y = 75, label = "PRK, IRN", family="Charis SIL", size = 5, angle = 90) + annotate("text", x = 2011, y = 93, label = "IRN, Fukushima", family="Charis SIL", size = 5, angle = 90) + coord_cartesian(ylim = c(0, 110))
+
+p1
+#ggsave(filename = "transp_headlines.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```
+# Figure 3: IAEA transparency in GC debate ----
+
+```{r, message=F}
+library(tm)
+library(slam)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(grid)
+
+# read in text files
+corpus <- Corpus(DirSource("../data/corpora/iaea-gc-records/", encoding="UTF-8"), readerControl=list(language="en"))
+
+# copy corpus and remove punctuation, numbers and transform to lower
+dtmCorpus <- corpus
+dtmCorpus <- tm_map(dtmCorpus, content_transformer(tolower))
+dtmCorpus <- tm_map(dtmCorpus, content_transformer(function(x) gsub("(['’\n  ]|[[:punct:]]|[[:space:]]|[[:cntrl:]])+", " ", x)))
+dtmCorpus <- tm_map(dtmCorpus, removeNumbers)
+
+# create document term matrix and remove stop words
+dtm <- DocumentTermMatrix(dtmCorpus, control=list(tolower=FALSE, wordLengths=c(2, Inf)))
+dictionary <- data.frame(row.names=colnames(dtm), "Occurrences"=col_sums(dtm),   "Stopword"=ifelse(colnames(dtm) %in% stopwords("en"), "Stopword", ""),   stringsAsFactors=FALSE)
+dtm <- dtm[, !colnames(dtm) %in% stopwords("en")]
+attr(dtm, "dictionary") <- dictionary
+
+meta(corpus, type="corpus", tag="language") <- attr(dtm, "language") <- "en"
+meta(corpus, type="corpus", tag="processing") <- attr(dtm, "processing") <- c(lowercase=TRUE, punctuation=TRUE, digits=TRUE, stopwords=TRUE, stemming=FALSE, customStemming=FALSE, twitter=FALSE, removeHashtags=NA, removeNames=NA)
+corpus
+dtm
+```
+
+
+```{r}
+# create bi-gram "public information"
+library(RWeka)
+
+options(mc.cores=1)
+BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2)) # set function for bi-grams
+
+bigrams <- DocumentTermMatrix(dtmCorpus, control = list(tokenize = BigramTokenizer)) # calculate bi-grams
+inf_bigrams <- as.data.frame(as.matrix(bigrams))
+inf_bigrams <- select(inf_bigrams, contains("information")) # filter for those including information
+inf_bigrams$GROUP <- rep(1, 54)
+
+# identify largest groups
+groups <-  inf_bigrams %>% group_by(GROUP) %>% summarise_each(funs(sum))
+groups <- as.data.frame(t(groups))
+summary(groups$V1)
+```
+
+
+```{r}
+#dtm2 <- removeSparseTerms(dtm, 0.1) #alternatively, but not workable for this analysis
+terms <- as.data.frame(as.matrix(dtm)) 
+terms$Year <- 1958:2011
+
+## combine relevant terms for transparency
+terms$TRANSPARENCY <- terms$transparent + terms$transparence + terms$transparency + terms$transparently + terms$transparencyand
+
+terms$DISCLOSURE <- terms$disclose + terms$disclosed + terms$disclosing + terms$disclosure + terms$disclosures
+
+# add from information bigrams, selecting only relevant bigrams with a large number of hits
+terms$PUBLIC.INFO <- inf_bigrams$`public information` + inf_bigrams$`information exchange` + inf_bigrams$`disseminate information` + inf_bigrams$`information center` + inf_bigrams$`provide information` + inf_bigrams$`information campaign`
+#write.csv(terms, file = "terms.csv") # export full matrix, if needed.
+
+
+terms2 <- terms %>% select(Year, TRANSPARENCY, DISCLOSURE, PUBLIC.INFO)
+
+#write.csv(terms2, file = "~/owncloud/Diss/dissertation-book/ch6/terms2.csv")
+
+```
+
+
+```{r ch6_ms_transparency, fig.height= 6, fig.width = 8, dpi = 300}
+library(extrafont)
+p <- melt(terms2, id = "Year")
+p1 <- ggplot(data = p, aes(x = Year, y = value, fill = variable)) + geom_bar(stat = "identity", position = "stack") + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm"), legend.key = element_blank()) + ylab("Hits in annual GC records") + xlab("Year") + theme(text=element_text(family="Charis SIL", size=12)) + scale_fill_manual(values = c("#BDBDBD", "#353334", "#7E7C7D"), name = "")
+p1
+
+#ggsave(filename = "ch6-ms_transparency.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```
+
+
+
+# Figure 4: State statements on IAEA transparency ----
+
+```{r}
+state.transparency.statements.export <- read.csv("../data/iaea-state-transparency-statements-export.csv", sep=";")
+
+plot.df <- state.transparency.statements.export %>% group_by(Year, Democracy, Code...Topic) %>% summarise(no.statements = sum(Relevant.))
+
+ggplot(plot.df) + geom_bar(aes(x = Year, y = no.statements, fill = Code...Topic), stat = "identity", position = "stack") + facet_grid(Democracy ~ .)
+
+
+## and again as a summary over time
+plot.df <- state.transparency.statements.export %>% group_by(Democracy, Code...Topic) %>% summarise(no.statements = sum(Relevant.))
+p1 <- ggplot(plot.df) + geom_bar(aes(x = as.factor(Democracy), y = no.statements, fill = Code...Topic), stat = "identity", position = "stack")  + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(0.5, "cm"), legend.key = element_blank()) + ylab("No. of statements") + xlab("non-democratic vs. democratic states") + theme(text=element_text(family="Charis SIL", size=12)) + scale_fill_grey("")
+p1
+
+#ggsave(filename = "ch6-ms-transp-statements.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```
+
+# Figure 5: IAEA statements vs. state demands ----
+
+```{r}
+iaea.transparency.statements.export <- read.csv("../data/iaea-transparency-statements-export.csv", sep=";")
+
+# overview for IAEA statements:
+plot.df <- iaea.transparency.statements.export %>% group_by(Year, Code...Topic) %>% summarise(no.statements = n())
+ggplot(plot.df) + geom_bar(aes(x = Year, y = no.statements, fill = Code...Topic), stat = "identity", position = "stack") 
+
+## combined plot
+
+df1 <- state.transparency.statements.export %>% filter(Code...Topic == "ADM" | Code...Topic == "INSTR") %>% group_by(Year, Code...Topic, Democracy) %>% summarise(value = n())
+df1$speaker[which(df1$Democracy == 1)] <- rep("Dem. States", length(df1$value[which(df1$Democracy == 1)])) 
+df1$speaker[which(df1$Democracy == 0)] <- rep("Non-Dem. States", length(df1$value[which(df1$Democracy == 0)])) 
+
+df2 <- iaea.transparency.statements.export %>% filter(Code...Topic == "ADM" | Code...Topic == "INSTR") %>% group_by(Year, Code...Topic) %>% summarise(value = n())
+df2$speaker <- rep("IAEA", length(df2$value)) 
+
+plot.df <- rbind_all(list(df1, df2))
+
+
+
+p1 <- ggplot(plot.df) + geom_bar(aes(x = Year, fill = speaker, y = value), size = 1, stat = "identity") + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm"), legend.key = element_blank()) + ylab("No. of statements") + xlab("") + theme(text=element_text(family="Charis SIL", size=12)) + scale_fill_manual("Speaker", values = c("#BDBDBD", "#353334", "#7E7C7D")) + facet_wrap(~ Code...Topic )
+p1
+
+#ggsave(filename = "ch6-ms-iaea-transp-statements.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```
+
+
+# Figure 6: Top CW states and top Schedule 2 states ----
+
+```{r}
+opcw_top5 <- read.csv2(file = "../data/opcw_members_gdp.csv")
+
+# mean variables
+mean.cw.states <- opcw_top5 %>% filter(Year == 1997) %>% group_by(CW.state) %>% summarise(value = mean(AggValue)) 
+mean.top5.sched2 <- opcw_top5 %>% filter(Year == 2011) %>% group_by(Top5.Chem.Ind) %>% summarise(value = mean(AggValue))
+
+# bind them
+plot.df <- data.frame(group = c("non-CW states", "CW states", "non-Top5 Schedule 2 states", "Top5 Schedule 2 states"), value = c(mean.cw.states$value, mean.top5.sched2$value))
+
+plot.df$group <- factor(plot.df$group, levels = c("non-CW states", "CW states", "non-Top5 Schedule 2 states", "Top5 Schedule 2 states"))
+
+# plot them
+p1 <- ggplot(plot.df) + geom_bar(aes(x = group, y = value / 1000000), stat = "identity", fill = "#7E7C7D") + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm"), legend.key = element_blank()) + ylab("Average GDP in trillion USD") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+p1
+#ggsave(filename = "ch6-top5-cw-states.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+
+```
+
+
+# Figure 7: mechanism case 2 ----
+
+```{r}
+nodes <-  create_nodes(nodes = c("inequality", "state demands", "Secretariat", "transparency", "o.g. norm"), 
+                       shape = c("circle", "circle", "diamond", "rectangle", "circle"), 
+                       fontname = "Charis SIL", 
+                       fixedsize = T, 
+                       fontsize = 4, 
+                       x = c(1, 2, 3, 4, 2), 
+                       y = c(4.5, 4.5, 5, 5, 5.5), 
+                       fillcolor = c("White", "White", "White", "WhiteSmoke", "White"), 
+                       style = "filled")
+
+edges <-  create_edges(edge_from = c("inequality", "state demands", "Secretariat", "o.g. norm"), 
+                       edge_to = c("state demands", "Secretariat", "transparency", "Secretariat"))
+
+graph <- create_graph(nodes_df = nodes, edges_df = edges, graph_attrs = c("layout = neato"))
+
+render_graph(graph)
+#graph.svg <- render_graph(graph, output = "SVG", width = 1800, height = 1600)
+#write(graph.svg, file = "ch6-mechan2.svg")
+
+```
+
+## Figure 8: NGOs at OPCW ----
+
+```{r}
+
+
+# load participation data and transform
+opcw.ngos <- read.csv2("../data/OPCW-NGO_participation_details.csv")
+names(opcw.ngos)[5:21] <- seq(1997, 2013)
+opcw.ngos <- opcw.ngos[c(1:92), ]
+
+opcw.ngos <- melt(opcw.ngos[c(3, 5:21)], id.vars = "Activities.Area")
+
+opcw.ngos.annual <- opcw.ngos %>% group_by(Activities.Area, variable) %>% summarize(n = sum(value))
+
+# and plot it
+p1 <- ggplot(filter(opcw.ngos.annual, Activities.Area == "Social Issue" | Activities.Area == "Science and Research" | Activities.Area == "Peace, Law and IR" | Activities.Area == "Industry")) + geom_bar(aes(x = variable, y = n, fill = Activities.Area), stat = "identity") + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm"), legend.key = element_blank(), axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + ylab("Number of NGO representatives") + xlab("") + theme(text=element_text(family="Charis SIL", size=12)) + scale_fill_manual(values = c("#020001", "#353334", "#7E7C7D", "#BDBDBD"))
+
+p1
+#ggsave(filename = "ch6-opcw-ngo-types.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```
+
+
+## Figure 9: Third mechanism ----
+```{r}
+nodes <-  create_nodes(nodes = c("media attention", "politicization", "Secretariat", "GC part.", "res. constraints", "part. events"), 
+                       shape = c("circle", "circle", "diamond", "rectangle", "circle", "rectangle"), 
+                       fontname = "Charis SIL", 
+                       fixedsize = T, 
+                       fontsize = 4, 
+                       x = c(1, 2, 3, 4, 3, 4), 
+                       y = c(5.8, 5.8, 5.8, 5.5, 4.6, 4.9), 
+                       fillcolor = c("White", "White", "White", "WhiteSmoke", "White", "WhiteSmoke"), 
+                       style = "filled")
+
+edges <-  create_edges(edge_from = c("media attention", "politicization", "Secretariat", "res. constraints"), 
+                       edge_to = c("politicization", "Secretariat", "GC part.", "part. events"))
+
+graph <- create_graph(nodes_df = nodes, edges_df = edges, graph_attrs = c("layout = neato"))
+
+render_graph(graph)
+#graph.svg <- render_graph(graph, output = "SVG", width = 1800, height = 1600)
+#write(graph.svg, file = "ch6-mechan3.svg")
+
+```
+
+## Figure 10: NGOs at IAEA ----
+
+```{r}
+iaea.ngos <- read.csv2("../data/IAEA-NGO-participation-details.csv")
+names(iaea.ngos)[5:59] <- seq(1957, 2011)
+
+iaea.ngos <- melt(iaea.ngos[c(3, 5:59)], id.vars = "Activities.Area")
+iaea.ngos$value[which(iaea.ngos$value == "?")] <- 1
+iaea.ngos$value <- as.numeric(iaea.ngos$value)
+iaea.ngos.annual <- iaea.ngos %>% group_by(Activities.Area, variable) %>% summarize(n = sum(value, na.rm = T))
+
+p1 <- ggplot(filter(iaea.ngos.annual, Activities.Area == "Industry" |Activities.Area == "Science and Research" | Activities.Area == "Professional Association" | Activities.Area == "Peace, Law and IR")) + geom_bar(aes(x = variable, y = n, fill = Activities.Area), stat = "identity") + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm"), legend.key = element_blank(), axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + ylab("Number of NGO representatives") + xlab("") + theme(text=element_text(family="Charis SIL", size=12)) + scale_fill_manual(values = c("#020001", "#353334", "#7E7C7D", "#BDBDBD"))
+
+p1
+#ggsave(filename = "ch6-iaea-ngo-types.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```
+
+## Figure 11: IAEA participation action ----
+```{r}
+iaea.terms <- read.csv("../data/iaea-participation-events.csv")
+iaea.terms$X <- NULL
+iaea.terms$budg.restraint <- NA
+library(car)
+iaea.terms$budg.restraint <- recode(iaea.terms$Year, recodes = "1957:1982 = '1957-1982'; 1983:1986 = '1983-1986'; 1987:1992 = '1987-1992'; 1993:2001 = '1993-2001'; 2002:2011 = '2002-2011'")
+
+plot.df <- iaea.terms %>% select(budg.restraint, GROUP_SCIENCE, GROUP_TRAINING, GROUP_ADVICE) %>% group_by(budg.restraint) %>% summarise(GROUP_SCIENCE = mean(GROUP_SCIENCE), GROUP_TRAINING = mean(GROUP_TRAINING), GROUP_ADVICE = mean(GROUP_ADVICE))
+plot.df <- melt(plot.df, id.vars = "budg.restraint")
+
+p1 <- ggplot(plot.df) + geom_bar(aes(x = budg.restraint, y = value, fill = variable), stat = "identity") + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm"), legend.key = element_blank(), axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + ylab("kinds of participation action events") + xlab("") + theme(text=element_text(family="Charis SIL", size=12)) + scale_fill_manual(values = c("#353334", "#7E7C7D", "#BDBDBD"))
+
+p1
+#ggsave(filename = "ch6-iaea-part-events.pdf", plot = p1, width = 8, height = 6, dpi = 300)
+```

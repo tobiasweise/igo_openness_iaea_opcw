@@ -1,0 +1,1149 @@
+---
+title: Explaining the Variation in the Opennesss of Intergovernmental Arms Control
+  Organizations - Raw Data Appendix
+author: "Tobias Weise"
+output:
+  html_document:
+    theme: journal
+    toc: yes
+    toc_depth: 4
+  pdf_document:
+    fig_crop: no
+    keep_tex: yes
+---
+
+
+
+
+
+
+This appendix tries to make the construction of the raw data-set
+reproducible. It lists the \emph{R} code that I used to create and 
+transform the data. It also hints at other data files, e.g. from the 
+qualitative data coding and more detailed data-sets, e.g. on the 
+participation of NGOs or the budgets of the organizations. These files
+are available in the electronic data appendix.
+
+
+For the analysis, I used the following R packages:[^1]
+
+[^1]:   Vincent Arel-Bundock (2014). countrycode: Convert country names and country codes. R  package version 0.17. http://CRAN.R-project.org/package=countrycode.
+ David B. Dahl (2014). xtable: Export tables to LaTeX or HTML. R package version 1.7-4. http://CRAN.R-project.org/package=xtable.
+Daróczi, G. (2014). pander: An R Pandoc Writer. R package version  0.5.1, URL http://cran.r-project.org/package=pander
+Ingo Feinerer and Kurt Hornik (2014). tm: Text Mining Package. R package version 0.6. http://CRAN.R-project.org/package=tm.
+Christopher Gandrud (2014). psData: A package to download regularlymaintained political science data sets and make commonly used, but infrequently updated variables based on this data. R package version 0.1.2. http://CRAN.R-project.org/package=psData.
+Garrett Grolemund, Hadley Wickham (2011). Dates and Times Made Easy with lubridate. Journal of Statistical Software, 40(3), 1-25. http://www.jstatsoft.org/v40/i03/.
+Duncan Temple Lang (2013). XML: Tools for parsing and generating XML within R and S-Plus.. R package version 3.98-1.1. http://CRAN.R-project.org/package=XML.
+Duncan Temple Lang (2013). RCurl: General network (HTTP/FTP/...) client interface for R. R package version 1.95-4.1. http://CRAN.R-project.org/package=RCurl.
+Duncan Temple Lang (2014). RJSONIO: Serialize R objects to JSON, JavaScript Object Notation. R package version 1.3-0. http://CRAN.R-project.org/package=RJSONIO.
+Hadley Wickham (2007). Reshaping Data with the reshape Package. Journal of Statistical Software, 21(12), 1-20. URL http://www.jstatsoft.org/v21/i12/.
+ H. Wickham. ggplot2: elegant graphics for data analysis. Springer :New York, 2009.
+Hadley Wickham and Romain Francois (2014). dplyr: A Grammar of Data Manipulation. R package version 0.3.0.2. http://CRAN.R-project.org/package=dplyr.
+Yihui Xie (2014). knitr: A general-purpose package for dynamic report generation in R.  R package version 1.7.
+Achim Zeileis (2014). ineq: Measuring Inequality, Concentration, and Poverty. R package version 0.2-13. http://CRAN.R-project.org/package=ineq.
+
+
+```{r setup, echo=T, message=F}
+library(knitr)
+library(XML)
+library(dplyr)
+library(ineq)
+library(reshape2)
+library(countrycode)
+library(psData)
+library(ggplot2)
+library(RCurl)
+library(RJSONIO)
+library(pander)
+library(xtable)
+library(lubridate)
+library(tm)
+```
+
+
+```{r, echo=FALSE, message=F}
+opts_chunk$set(tidy = F)
+library(extrafont)
+loadfonts()
+opts_chunk$set(warning=F, dev = "png")
+```
+
+
+# Dependent Variables
+First, I collected a number of dependent variables on transparency and 
+participation in intergovernmental organizations. Below, I will document how
+I created the individual variables and how I collected and transformed the
+data. In most cases, the same steps are necessary to create the data for both
+IAEA and OPCW. If this is not the case, I document the different procedures. 
+
+##TALK-Participation
+### IAEA
+-  References to norm of participation in the Annual Report
+-  Source: number of statements in the Annual Report that refer to the idea of participation, 
+inclusion and representation of non-state actors like NGOs, business groups or experts.
+-  Data derived from qualitative coding. See the IAEA RQDA file and the instructions to export the TALK-Participation codes.
+
+```{r}
+#create empty data-set
+data <- data.frame(IO=c(rep("IAEA", 55), rep("OPCW", 15)), 
+							Year = c(1957:2011, 1997:2011), 
+									 Decade = c(
+									 	rep("1950s", 4),
+									 	rep("1960s", 10),
+									 	rep("1970s", 10),
+									 	rep("1980s", 10),
+									 	rep("1990s", 10),
+									 	rep("2000s", 10), "2010s",
+									 	rep("1990s", 4),
+										rep("2000s", 10),
+												"2010s"))  
+
+# import codings from RQDA file
+## this is commented here, as it breaks the knitr chain
+#library(RQDA)
+#RQDA::openProject("../data/IAEA.rqda")
+#iaea_codings <- RQDA::getCodingTable()
+#iaea_summary <- iaea_codings %>% group_by(filename, codename) 	%>% summarise(n = n())
+#save(iaea_summary, file = "iaea_summary")
+load("../data/iaea_summary")
+
+# filter for relevant codings and add to dataset
+iaea_part <- as.data.frame(filter(iaea_summary, 
+								codename == "TALK-Participation"))$n
+
+# replace "missings" with 0 because they are true zeros 
+data$TALK.Part <- rep(NA, 70)
+data$TALK.Part[which(data$IO == "IAEA")] <-	
+	c(iaea_part[1:5], rep(0, 2), 
+		iaea_part[6], rep(0, 4), 
+		iaea_part[7], rep(0, 16), 
+		iaea_part[8:9], rep(0, 2), 
+		iaea_part[10], rep(0,2), 
+		iaea_part[11:14], 0, 
+		iaea_part[15:28])
+```
+
+### OPCW
+
+
+```{r}
+# import my codings data from RQDA
+#RQDA::openProject("../data/OPCW.rqda")
+#codings <- RQDA::getCodingTable()
+#opcw_summary <- codings %>% group_by(filename, codename) %>% summarise(n = n())
+#save(opcw_summary, file = "opcw_summary")
+load("../data/opcw_summary")
+
+# filter for relevant codings and add to dataset
+opcw_part <- as.data.frame(filter(opcw_summary, 
+								codename == "TALK-Participation"))$n
+
+# replace "missings" with 0 because they are true zeros 
+data$TALK.Part[which(data$IO == "OPCW")] <- 
+	c(0, opcw_part[1:7], 0, 
+	opcw_part[8:13])
+```
+
+
+
+```{r data_talk_part, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = TALK.Part, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+##TALK-Transparency
+### IAEA
+-  References to norm of transparency in the Annual Report
+-  Source: number of statements in the Annual Report that refer directly to the principle of 
+transparency. 
+-  see IAEA RQDA file and instructions to get TALK-Transparency codings.
+
+```{r}
+# filter for relevant codings and add to dataset
+iaea_trans <- as.data.frame(filter(iaea_summary, 
+								codename == "TALK-Transparency"))$n
+
+data$TALK.Trans <- rep(NA, 70)
+data$TALK.Trans[which(data$IO == "IAEA")] <-   
+	c(rep(0, 36), iaea_trans[1], 0, 
+		iaea_trans[2], 0, iaea_trans[3:4], 0, 
+		iaea_trans[5:11], 0, iaea_trans[12:13], 0, 
+		iaea_trans[14])
+```
+ 
+
+### OPCW
+```{r}
+# filter for relevant codings and add to dataset
+opcw_trans <- as.data.frame(filter(opcw_summary, 
+								codename == "TALK-Transparency"))$n
+
+data$TALK.Trans[which(data$IO == "OPCW")] <- 
+	c(0, opcw_trans[1:6], 0, opcw_trans[7], 
+		0, opcw_trans[8:12])
+```
+
+```{r data_talk_trans, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = TALK.Trans, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+## DECISION-Participation
+### IAEA
+-  Decisions that increase participation.
+-  Source: General Conference resolutions, secondary literature
+-  2 Levels:
+
+    -  1: 1957-1974: fixed rules for consultation and participation in GC, yet, not really enacted 
+    after 1959
+    -  2: 1975-2011: keeping the rules, yet allowing ad-hoc invitations to participate at GC without 
+    formal consultative status by GOV.
+    
+```{r}
+data$DEC.Part <- rep(NA, 70)
+data$DEC.Part[which(data$IO == "IAEA")] <- 
+	c(rep(1, 18), rep(2, 37))
+```
+
+### OPCW
+-  3 levels:
+
+	-  1997-1999: ad-hoc rules for passive participation
+	-  2000-2002: plus access to official CSP documents
+	-  2003-2011: plus limited rights to address meetings
+   
+
+```{r}
+data$DEC.Part[which(data$IO == "OPCW")] <- 
+	c(rep(1, 3), rep(2, 3), rep(3, 9))
+```
+
+```{r data_dec_part, warning=F, echo=F, message=F}
+ggplot(data, aes(x = Year, y = DEC.Part, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+## DECISION-Transparency
+### IAEA
+-  Decisions that increase transparency.
+-  Source: Annual Report, General Conference resolutions and GOV decisions
+-  From the AR research, I propose the following 12 phases of transparency relevant decisions. 
+
+	-  1: base-line policy: mainly reactive outreach to media, partially during phases of little 
+	public demand for IAEA transparency
+	-  2: issuing IAEA newsbriefs
+	-  3: IAEA Highlights publication
+	-  4: new PR policy: e.g. with media seminars
+	-  5: Launch of IAEA website
+	-  6: distribution of electronic official documents through website to public
+	-  7: partial de-classification of GOV documents
+	-  8: new PR strategy: outreach to non-traditional actors
+	-  9: new TC policy: increase transparency
+	-  10: new PR strategy: pro-active and distribution of Agency publications for free
+	-  11: New PR strategy: increase outreach to devlopment community
+	-  12: Using social media
+
+```{r}
+data$DEC.Trans <- rep(NA, 70)
+data$DEC.Trans[which(data$IO == "IAEA")] <- 
+	c(rep(1, 29), rep(2, 3), 3, rep(4, 3), 
+		5, 5, 6, 7, 7, 8, 8, 9, 9, rep(10, 5),
+		11, 11, 11, 12, 12)
+```
+
+
+### OPCW
+-  There are the following levels of increased transparency decisions, taken 
+from the Annual Reports and CoSP-Resolutions
+
+	-  1: 1997: starting level, with website and publications, yet targeted 
+    primarily towards the Member States
+    -  2: 1998: increasing publications output, aiming at broader audiences 
+    and starting library
+    -  3: 1999: re-worked website policy: now also targeted at general public
+    -  4: 2000: Expansion of Website. "Synthesis" Journal available online 
+    for free, course material for national authorities available online
+    -  5: 2002: new publications targeted at general public: OPCW Profiles,
+    "Basic Facts" re-issue, Flyers on Basic Information
+    -  6: 2003: outreach strategy aiming at broader geographical reach, launch
+    of new publications: "OPCW Regional Series", "Chemical Disarmament Quarterly"
+    -  7: 2008: participation in "Open Day", i.e. opening its doors to the
+    public for 1 day, increased outreach to research institutions, website with
+    more official documents
+    -  8: 2010: starting social media activities, development of a new "Public
+    Diplomacy Strategy" and Task Force, first steps of live reporting of OPCW
+    events.
+
+```{r}
+data$DEC.Trans[which(data$IO == "OPCW")] <- 
+	c(1, 2, 3, 4, 4, 5, rep(6, 5), 7, 7, 8, 8)
+```
+
+```{r data_dec_trans, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = DEC.Trans, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+##ACTION-Participation-GC-NGO-present	
+### IAEA
+-  Number of NGOs present at annual General Conference.
+-  Source: Number of Non-Governmental Organizations in official list of delegations 
+
+```{r}
+# importing my data-set on IAEA GC participation
+iaea_gc_ngo <- read.csv('../data/IAEA-GC-NGOs.csv')
+
+data$ACT.Part.1 <- rep(NA, 70)
+data$ACT.Part.1[which(data$IO == "IAEA")] <- 
+	iaea_gc_ngo$NGO.present
+```
+
+
+### OPCW
+-  Number of NGOs present at the annual Session of the Conference of State Parties
+-  Source: Lists of CSP Participants (from OPCW Documents Office)
+
+```{r}
+# importing my data on OPCW participation
+opcw_ngo <- read.csv2('../data/OPCW-CSP-NGO.csv')
+data$ACT.Part.1[which(data$IO == "OPCW")] <- 
+	opcw_ngo$SUM.NGOS[1:15]
+```
+
+```{r data_act_part_1, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = ACT.Part.1, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+##ACTION-Participation-GC-NGO-Representatives	
+### IAEA
+-  Number of NGO representatives at General Conference
+-  Source: Count of registered representatives of Non-Governmental Organizations in official 
+list of Delegations 
+
+```{r}
+data$ACT.Part.2 <- rep(NA, 70)
+data$ACT.Part.2[which(data$IO == "IAEA")] <- 
+	iaea_gc_ngo$Representatives.present
+```
+
+
+### OPCW
+-  Source: List of participants
+
+```{r}
+data$ACT.Part.2[which(data$IO == "OPCW")] <- 
+  opcw_ngo$SUM.NGO.REP[1:15]
+```
+
+```{r data_act_part_2, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = ACT.Part.2, linetype = IO)) + 
+  geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+##ACTION-Participation-GC-New-NGO
+### IAEA
+-  Number of NGOs that participate at GC for the first time
+-  Source: List of Non-Governmental Organizations in official list of Delegations 
+
+```{r}
+data$ACT.Part.3 <- rep(NA, 70)
+data$ACT.Part.3[which(data$IO == "IAEA")] <- 
+	iaea_gc_ngo$Number.of.New.NGO.present
+```
+
+
+How do the different IAEA measures for ACTION-Participation correlate?
+```{r}
+data %>% filter(IO == "IAEA") %>% 
+	select(ACT.Part.1, ACT.Part.2, ACT.Part.3) %>%
+	cor(use = 'pairwise.complete.obs')
+```
+So, the amount of NGOs and NGO representatives correlates highly. 
+The presence of new NGOs, however, seems to follow a different 
+trend.
+
+### OPCW
+
+```{r}
+data$ACT.Part.3[which(data$IO == "OPCW")] <- 
+  opcw_ngo$NEW.NGOS[1:15]
+```
+
+```{r data_act_part_3, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = ACT.Part.3, linetype = IO)) + 
+  geom_line() +
+  theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+How do the different OPCW measures for ACTION-Participation correlate?
+```{r}
+data %>% filter(IO == "OPCW") %>% 
+  select(ACT.Part.1, ACT.Part.2, ACT.Part.3) %>%
+	cor(use = 'pairwise.complete.obs')
+```
+All measures of NGOs and NGO representatives correlates highly. 
+The presence of new NGOs, however, seems to follow a different 
+trend. I will thus use the number of NGOs and NGO representatives
+for the analysis.
+
+##ACTION-Participation-Events
+### IAEA
+-  number of participation events (i.e. events with non-state or sub-state level participation) 
+that are discussed in the Annual Reports. Counts both actual events and more general references to events.
+-  Source: Annual Report, qualitative codings, guided by the following search terms:
+
+         -  workshop 
+         -  training 
+         -  event
+         -  seminar
+         -  group
+         -  meeting
+         -  course
+         -  forum
+         -  exercise 
+         -  advisory
+         -  panel
+         -  symposia  
+         -  consultant
+         -  network      
+
+```{r, eval=T}
+# filter for relevant codings and add to dataset
+data$ACT.Part.4 <- rep(NA, 70)
+data$ACT.Part.4[which(data$IO == "IAEA")] <- 
+	as.data.frame(filter(iaea_summary, codename == "ACT.Part"))$n
+```
+
+
+### OPCW
+-  number of participation events (i.e. events with non-state or sub-state level participation) 
+that are discussed in the Annual Reports. Counts both actual events and more general references to events.
+-  Source: Annual Report, qualitative codings, guided by the following search terms:
+
+        -  workshop 
+        -  training 
+        -  event
+        -  seminar
+        -  group
+        -  course
+        -  meeting
+        -  forum
+        -  exercise 
+        -  Board
+        -  advisory
+        -  project
+        -  committee
+        -  program
+
+
+```{r}
+# filter for relevant codings and add to dataset
+data$ACT.Part.4[which(data$IO == "OPCW")] <- 
+	as.data.frame(filter(opcw_summary, codename == "ACT.Part"))$n[2:16]
+```
+
+```{r data_act_part_4, message=F, echo=F, warning=F}
+ggplot(data, aes(x = Year, y = ACT.Part.4, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+How do the two participation action data correlate?
+```{r}
+cor(data$ACT.Part.1, data$ACT.Part.4, use = "pairwise.complete.obs") 
+```
+There is only weak correlation, so it matters which of the indicators are 
+chosen as they measure different aspects of participation. I will thus include
+both in my analysis.
+
+
+## ACTION-Transparency-Public Information Budget
+### IAEA
+-  share of the Budget available for public information
+-  source: annual budget reports (often under Administrative Department, or listed under "distribution of information")
+-  From 1957 to 1970: costs for distribution of information, 1971-1972: separate 
+division of information, 1973-1979: public information part of office of external 
+relations,  budget shows that part of public information on former external 
+relations budget is about  45 percent. I therefore use 45 percent of the 
+1973-1979 budget for the data row, 1980: separate division of public information, 
+since 2002: under Information support services. Also, additional budget for ICT, 
+I added this to the usual public information costs, as website etc. provides 
+lots of transparency.
+-  also see see RB-BudgSize
+
+```{r}
+# importing my data-set on IAEA budgets
+iaea_budget <- read.csv2('../data/IAEA-BUDGET.csv')
+data$ACT.Trans.1 <- rep(NA, 70)
+data$ACT.Trans.1[which(data$IO == "IAEA")] <- 
+	iaea_budget$Public.Information.Budget / iaea_budget$Total.Budget
+```
+
+
+### OPCW
+-  The share of the total budget that the OPCW spends for external relations and 
+information systems
+-  Source: OPCW budgets. Total budgeted expenditures for the *External Relations* and 
+*Information Systems* programs.
+
+
+```{r}
+# importing my data-set on OPCW budgets
+opcw_budget <- read.csv2('../data/OPCW-BUDGET.csv', dec = '.')
+data$ACT.Trans.1[which(data$IO == "OPCW")] <- 
+	opcw_budget$Public.Information.Budget[1:15] / 
+	opcw_budget$Total.Budget[1:15]
+```
+
+```{r data_act_trans_1, message=F, echo=F, warning=FALSE}
+ggplot(data, aes(x = Year, y = ACT.Trans.1, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+# Independent Variables
+Next, here is the description of the construction of the independent variables.
+`RB` identifies resource-based mechanisms, `NB` the norm-based ones.
+
+
+## RB-BudgSize
+### IAEA
+-  Annual Budget in 2009 USD.
+-  In years where there were 2 year budgets, I take the data from the updated budgets for each year, if available.
+-  If available, I give preference to the "Total Operational Regular Budget" (by item of 
+expenditure, total costs) numbers, when available,  because this lists staff costs.
+-  When there are price estimates, I always use the prize estimates for the budgeted year.
+-  Source: annual budget reports. Note: budgets for year x is discussed and presented in GC x-1	
+-  Source for conversion in 2009 USD: GDP Deflator data, US DoC, BEA, Table 1.1.9
+-  Source for conversion rates EUR, USD for 2006 - 2012: ECB, statistics data warehouse, 
+averaged standardized measures, 	
+
+```{r EUR_exchange, cache=T, eval=T}
+# fetch conversion rates from EUR to USD because IAEA changed 
+# accounting to EUR in 2006
+url <- "http://sdw.ecb.europa.eu/browseTable.do?DATASET=0&node=2018794&FREQ=A&CURRENCY=USD&sfl1=4&sfl3=4&SERIES_KEY=120.EXR.A.USD.EUR.SP00.A"
+
+table <- htmlParse(getURL(url))
+table <- readHTMLTable(table)
+EUR_USD <- as.data.frame(table[5])
+EUR_USD <- arrange(EUR_USD, NULL.V1)
+iaea_budget$exchange <- c(rep(1, 49), 
+		as.numeric(as.character(EUR_USD$NULL.V2[10:15])))
+
+# for conversion to 2009 USD, use GDP deflator, source cannot be 
+# loaded with R, quandl only has data until 1969
+#url2 <- "http://www.bea.gov/iTable/iTableHtml.cfm?reqid=9&step=3&
+#isuri=1&910=x&911=0&903=13&904=1957&905=2011&906=a"
+iaea_budget$deflator <- c(16.641,	17.018,	17.254,	17.493,	17.686,	
+		17.903,	18.105,	18.383,	18.720,	19.246,	19.805,	20.647,	21.663,	
+		22.805,	23.964,	25.005,	26.366,	28.734,	31.395,	33.119,	35.173,	
+		37.643,	40.750,	44.425,	48.572,	51.586,	53.623,	55.525,	57.302,	
+		58.458,	59.949,	62.048,	64.460,	66.845,	69.069,	70.644,	72.325,	
+		73.865,	75.406,	76.783,	78.096,	78.944,	80.071,	81.891,	83.766,	
+		85.054,	86.754,	89.132,	91.991,	94.818,	97.335,	99.236,	100.000,	
+		101.211, 103.199)
+
+# now, calculate IAEA budget in 2009 USD
+data$RB.Budget.All <- rep(NA, 70)
+data$RB.Budget.All[which(data$IO == "IAEA")]  <- 
+	iaea_budget$exchange * iaea_budget$Total.Budget * 
+	(100 / iaea_budget$deflator) 
+```
+
+### OPCW
+-  Total Budget of OPCW in 2009 USD
+-  Source: Annual Budget Decisions from CoSP
+
+```{r}
+# Need EUR to USD conversion rates and NLG to USD rates for 1997-1999
+## NLG to USD rates from Netherlands National Bank, make R recognize 
+## ',' as decimal point
+url5 <- "http://www.statistics.dnb.nl/index.jsp?lang=nl&todo=Koersen&service=show&data=21&type=y&cur=g&s=1&begin1=1997&end1=1999"
+table <- htmlParse(getURL(url5))
+table <- readHTMLTable(table)
+NLG_USD <- as.data.frame(table[2])
+write.csv(NLG_USD[c(1,3)], file = 'nlg_usd.csv')
+NLG_USD <- read.csv('nlg_usd.csv', dec = ",")
+
+opcw_budget$exchange <- c(1 / NLG_USD$NULL.1[1:3], 
+		as.numeric(as.character(EUR_USD$NULL.V2[4:17])))
+
+# as above, convert to 2009 USD, using GDP deflator and add to data-set
+opcw_budget$deflator <- c(iaea_budget$deflator[41:55], 
+		105.002,	106.590)
+data$RB.Budget.All[which(data$IO == "OPCW")]  <- 
+	opcw_budget$exchange[1:15] * 
+	opcw_budget$Total.Budget[1:15] * (100 / opcw_budget$deflator[1:15])
+```
+
+```{r data_rb_budget, message=F, echo=F, eval=T}
+ggplot(data, aes(x = Year, y = RB.Budget.All, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+## RB-StaffCosts
+### IAEA
+-  Staff costs as share of total operational budget.
+-  Staff costs taken from budget reports, including salaries and general staff costs.	
+-  Source: budget reports, see RB-BudSize.
+
+```{r}
+data$RB.Budget.Staff <- rep(NA, 70)
+data$RB.Budget.Staff[which(data$IO == "IAEA")] <- 
+	iaea_budget$Staff.Costs / iaea_budget$Total.Budget
+```
+
+
+### OPCW
+-  Staff costs (including salaries and general staff costs) as a share of the total budget.
+-  Source: OPCW budgets.
+
+```{r}
+data$RB.Budget.Staff[which(data$IO == "OPCW")] <- 
+	opcw_budget$Staff.Costs[1:15] / 
+	opcw_budget$Total.Budget[1:15]
+```
+
+```{r data_rb_staff, message=F, echo=F}
+ggplot(data, aes(x = Year, y = RB.Budget.Staff, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+How do the two budget measures correlate?
+```{r}
+cor(data$RB.Budget.All, data$RB.Budget.Staff, 
+		use = 'pairwise.complete.obs')
+```
+There is weak negative correlation, so they rather measure different 
+things. Consequently, I will use both measures for the analysis.
+
+
+## RB-IneqMembers
+### IAEA
+-  Measures the inequality of the member states. I use the Gini Coefficient of 
+the annual GDP data for the members. The higher the coefficient, the more 
+inequal the states are.
+-  Membership Data taken from the IAEA Website
+-  source: Penn World Tables 8.0, Real GDP at constant 2005 national prices 
+(in mil. 2005US$) for states that are available.
+-  Limited data resources limit the interpretation of the results. Calculated inequality will 
+probably be smaller than actual one.
+
+```{r cow, cache=T, warning=F, message=F}	
+# I take the IAEA membership data from the Agency's website.
+# For reasons of reproducibility, I take an archived version
+url_iaea = "https://web.archive.org/web/20140125141116/http://www.iaea.org/About/Policy/MemberStates/"
+
+table <- htmlParse(getURL(url_iaea))
+table <- readHTMLList(table)
+
+table_iaea <- table[[6]]
+table_iaea <-	data.frame(matrix(unlist(table_iaea), nrow=45, byrow=T))
+colnames(table_iaea) <- "data"
+table_iaea$data <- as.character(table_iaea$data)
+# add empty cell for 2010 and add missing years
+table_iaea[41,] <- "2010: none"
+table_iaea[46,] <- "1971: none"
+table_iaea[47,] <- "1975: none"
+table_iaea[48,] <- "1978: none"
+table_iaea[49,] <- "1979: none"
+table_iaea[50,] <- "1980: none"
+table_iaea[51,] <- "1981: none"
+table_iaea[52,] <- "1982: none"
+table_iaea[53,] <- "1985: none"
+table_iaea[54,] <- "1987: none"
+table_iaea[55,] <- "1988: none"
+table_iaea[56,] <- "1989: none"
+table_iaea[57,] <- "1990: none"
+table_iaea[58,] <- "1991: none"
+
+# tidy the data
+table_iaea <- colsplit(table_iaea$data, ": ", c("year", "countries"))
+table_iaea <- arrange(table_iaea, year)
+countries_iaea <- list()
+for (i in seq(along = table_iaea$year)) {
+countries_iaea[i] <- strsplit(as.list(table_iaea$countries)[[i]], ", ")	
+  }
+
+countries_iaea <- melt(countries_iaea)
+countries_iaea$Year <- countries_iaea$L1 + 1956
+countries_iaea$L1 <- NULL
+countries_iaea <- filter(countries_iaea, Year < 2012)
+countries_iaea <- filter(countries_iaea, value != "none")
+
+write.csv(countries_iaea, file="iaea_members.csv")
+
+# convert table into country-year format
+# see for reference: 
+# http://stackoverflow.com/questions/5425584/creating-new-
+#variable-and-new-data-rows-for-country-conflict-year-observations
+countries_iaea$end.date <- rep(2011, length(countries_iaea$Year))
+
+library(plyr)
+members_iaea <- ddply(countries_iaea, .(value), function(x){
+	data.frame(
+		#country=x$Member.State,
+		Year=seq(x$Year, x$end.date)
+		#accession=x$accession
+		#yrend=x$end
+	)
+}
+)
+detach("package:plyr", unload=TRUE)
+
+# join gdp and membership data
+# first, add country code to cow data with countrycodes-package
+members_iaea$isoc <-  
+	countrycode(members_iaea$value, 
+							  origin="country.name", 
+							  destination="iso3c", warn=T)
+
+# add non-matching values manually
+#members_iaea$isoc[which(members_iaea$value == 
+#					"Socialist Federal Rep. of Yugoslavia")] <- "YUG"
+
+# get Penn World Tables data for all states, Real GDP at constant 
+# 2005 national prices, downloaded as csv from url below
+# url2 <- "http://citaotest01.housing.rug.nl/FebPwt/Dmn/AggregateXs.mvc/
+# PivotShow#"
+penn_gdp <- read.csv('../data/PENN-GDP.csv')
+
+# join / merge
+iaea_ineq <- merge(x = members_iaea, y = penn_gdp, 
+									 by.x = c("isoc", "Year"), 
+									 by.y = c("RegionCode", "YearCode"))
+
+# those stats are not in the merged data set 
+# because GDP data is missing
+setdiff(unique(members_iaea$isoc), unique(iaea_ineq$isoc))
+
+# calculate Gini per year
+iaea_ineq2 <- iaea_ineq %>% group_by(Year) %>% 
+	summarise(members = n(), gini = ineq(AggValue), 
+						mean = mean(AggValue)) 
+
+data$RB.Inequality <- rep(NA, 70)
+data$RB.Inequality[which(data$IO == "IAEA")] <- 
+	iaea_ineq2$gini
+```
+
+
+###OPCW
+
+```{r opcw_members, cache=T, warning=F, message=FALSE}
+# OPCW membership data is not available in other sources, I thus 
+# create the data here from alternative sources
+# take data from membership table off OPCW website
+url_opcw = "https://web.archive.org/web/20140108120526/http://www.opcw.org/about-opcw/member-states/"
+
+
+table <- htmlParse(getURL(url_opcw))
+table <- readHTMLTable(table)
+
+table_opcw <- as.data.frame(table[[4]])
+table_opcw$accession <- year(dmy(table_opcw$"Entry into Force"))
+table_opcw$Member.State <- as.character(table_opcw$"Member State")
+
+table_opcw <- 
+	table_opcw %>% select(accession, Member.State) %>% arrange(accession) 
+
+write.csv(table_opcw, file="opcw_members.csv")
+
+# convert table into country-year format
+# see for reference: 
+# http://stackoverflow.com/questions/5425584/creating-new-variable-and-new-
+#	data-rows-for-country-conflict-year-observations
+table_opcw$end.date <- rep(2011, length(table_opcw$accession))
+
+library(plyr)
+members_opcw <- ddply(table_opcw, .(Member.State), function(x){
+	data.frame(
+		#country=x$Member.State,
+		Year=seq(x$accession, x$end.date)
+		#accession=x$accession
+		#yrend=x$end
+		)
+	}
+)
+detach("package:plyr", unload=TRUE)
+
+# join gdp and membership data
+# first, add country code to cow data with countrycodes-package
+members_opcw$isoc <-  countrycode(members_opcw$Member.State, 
+		origin="country.name", destination="iso3c", warn=T)
+
+# add non-matching values manually
+#members_opcw$isoc[which(members_opcw$country ==
+#								"São Tomé e Príncipe")] <- "STP"
+
+# join / merge
+opcw_ineq <- merge(x = members_opcw, y = penn_gdp, 
+		by.x = c("isoc", "Year"), by.y = c("RegionCode", "YearCode"))
+
+#write.csv2(opcw_ineq, file	= "opcw_members_gdp")
+
+# those states are not in the merged data set 
+# because GDP data is missing
+setdiff(unique(members_opcw$isoc), unique(opcw_ineq$isoc))
+
+
+# calculate Gini per year
+opcw_ineq2 <- opcw_ineq %>% group_by(Year) %>% 
+	summarise(members = n(), gini = ineq(AggValue), 
+	mean = mean(AggValue)) 
+
+
+data$RB.Inequality[which(data$IO == "OPCW")] <- 
+	opcw_ineq2$gini
+```
+
+```{r data_rb_ineq, message=F, echo=F}
+ggplot(data, aes(x = Year, y = RB.Inequality, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+
+## RB-Complexity
+### IAEA
+
+-  Measures the complexity of the policy field that the organization covers.
+-  I create a qualitative variable. I quantify the number of activities that the organizations'
+   statutes say the organizations have. I assume that the more tasks the organization
+   has to fulfill, the more complex its operations are.
+-  The IAEA statute (Art III) lists the following tasks
+
+    1.  encourage, assist and conduct research, develop practical applications 
+        foster scientific exchange
+    2.  act as intermediary for supply of materials, services, or facilities for states
+    3.  provide nuclear materials, services, equipment and facilities with focus
+        on developing states, i.e. technical assistance
+    4.  establish and administer safeguards
+    5.  develop and apply safety standards
+
+```{r}
+data$RB.Complexity <- rep(NA, 70)
+data$RB.Complexity[which(data$IO == "IAEA")] <- 
+	c(rep(5, 55))
+```
+
+### OPCW
+
+-  The CWC, which is also the founding document of the OPCW, lists the following
+   tasks for the OPCW:
+   
+    1.  implementation and verification of chemical weapons destruction (Art. VIII)
+    2.  assistance and protection against chemical weapons (Art X)
+    3.  economic and technical development (Art XI)
+
+```{r}
+data$RB.Complexity[which(data$IO == "OPCW")] <- 
+	c(rep(3, 15))
+```
+
+
+## NB-Press Salience
+### IAEA
+-  Shows how present the organization is in the global press.
+-  source: hits in the "major world news" corpus of Lexis Nexis
+
+First, I show that there are no effects of the larger corpus size and 
+that the reporting of total numbers is a good indicator for visibility.
+
+```{r}
+# import my IAEA Lexis-Nexis data
+iaea_media <- read.csv2("../data/IAEA-MEDIA.csv")
+cor(iaea_media$All.Hits, iaea_media$All.WashPost, 
+		use = 'pairwise.complete.obs')
+```
+There is high correlation (`r round(cor(na.omit(iaea_media$All.Hits), 
+na.omit(iaea_media$All.WashPost)), digits = 3)`) between `All Media Hits` 
+and those in the `Washington Post` only. Thus, the higher number of sources in
+the corpus in later years does not significantly change the amount of
+media attention, when compared to one source alone.
+
+```{r}
+data$NB.visibility.1 <- rep(NA, 70)
+data$NB.visibility.1[which(data$IO == "IAEA")] <- 
+	iaea_media$All.Hits[1:55]
+```
+
+
+### OPCW
+-  see above
+
+```{r}
+# import my OPCW Lexis-Nexis data
+opcw_media <- read.csv2("../data/OPCW-MEDIA.csv")
+cor(opcw_media$AllHits, opcw_media$WashPost, 
+		use = 'pairwise.complete.obs')
+```
+
+Also for the OPCW, there is high correlation (`r round(cor(na.omit(opcw_media$AllHits), na.omit(opcw_media$WashPost)), digits = 3)`)
+between `All Media Hits` and those in the `Washington Post` only.
+
+```{r}
+data$NB.visibility.1[which(data$IO == "OPCW")] <- 
+	opcw_media$AllHits[1:15]
+```
+
+```{r data_nb_vis_1, message=F, echo=F}
+ggplot(data, aes(x = Year, y = NB.visibility.1, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+## NB-Press Headline
+### IAEA
+-  Media salience in the headlines of articles.
+-  Data as a share of headlines per total hits for comparability and to know when the 
+organization is only cited and when there's a focused article on the IO.
+-  Source: hits in the headlines of the "major world news" corpus of Lexis Nexis
+
+```{r}
+data$NB.visibility.2 <- rep(NA, 70)
+data$NB.visibility.2[which(data$IO == "IAEA")] <- 
+	iaea_media$Headlines[1:55] / 
+	iaea_media$All.Hits[1:55]
+```
+
+
+### OPCW
+
+
+```{r}
+data$NB.visibility.2[which(data$IO == "OPCW")] <- 
+	opcw_media$Headlines[1:15] / 
+	opcw_media$AllHits[1:15]
+```
+
+```{r data_nb_vis_2, message=F, echo=F}
+ggplot(data, aes(x = Year, y = NB.visibility.2, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+
+## NB-Democratic Members
+### IAEA
+- Provides the annual proportion of democratic members (Polity IV, `polity2`
+>= 7) of the whole organization.
+- Source: Democracy values from POLITY IV dataset, membership data from 
+organizations' websites.  
+
+```{r polity4, cache=T, warning=F}
+# get Polity IV values with psData package, data available 
+polity4 <- 
+	PolityGet(url = "http://www.systemicpeace.org/inscr/p4v2012.sav", 
+	OutCountryID = "iso3c")
+polity <- polity4[c(1,6,12)]
+
+## merge with IAEA member data
+iaea_polity <- merge(x = members_iaea, y = polity, 
+		by.x = c("isoc", "Year"), by.y = c("iso3c", "year"))
+
+# dropped observations, due to missing data in polityIV
+setdiff(unique(members_iaea$isoc), unique(iaea_polity$isoc))
+
+# calculate share of states with polity2 >6 and other indicators
+iaea_demmem <- iaea_polity %>% group_by(Year) %>% 
+	summarise(n = n(), 
+	mean_polity = mean(polity2, na.rm = T), 
+	n_democratic = sum(polity2 > 6, na.rm = T)) 
+iaea_demmem$dem_share <- iaea_demmem$n_democratic / iaea_demmem$n
+
+
+data$NB.dem.mem <- rep(NA, 70)
+data$NB.dem.mem[which(data$IO == "IAEA")] <- 
+	iaea_demmem$dem_share
+``` 
+
+
+### OPCW
+
+```{r}
+## merge polity with OPCW member data
+opcw_polity <- merge(x = members_opcw, y = polity, 
+		by.x = c("isoc", "Year"), by.y = c("iso3c", "year"))
+
+# dropped observations, due to missing data in polityIV
+setdiff(unique(members_iaea$isoc), unique(iaea_polity$isoc))
+
+# calculate share of states with polity2 >6 and other indicators
+opcw_demmem <- opcw_polity %>% group_by(Year) %>% 
+	summarise(n = n(), 
+	mean_polity = mean(polity2, na.rm = T), 
+	n_democratic = sum(polity2 > 6, na.rm = T)) 
+opcw_demmem$dem_share <- opcw_demmem$n_democratic / opcw_demmem$n
+
+data$NB.dem.mem[which(data$IO == "OPCW")] <- 
+	opcw_demmem$dem_share[1:15]
+``` 
+
+```{r data_dem_mem, message=F, echo=F}
+ggplot(data, aes(x = Year, y = NB.dem.mem, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+## NB-Governance Depth
+### IAEA
+-  The authority of the IGO.
+-  I will use the following qualitative factor levels to describe growing governance depth of the IAEA:
+
+	-  1957 - 1969: business as usual
+	-  1970 - 1990: NPT inspections
+	-  1991 - 2011: contribution to political conflicts 
+
+```{r}
+data$NB.gov.depth <- rep(NA, 70)
+data$NB.gov.depth[which(data$IO == "IAEA")] <- 
+	c(rep(1, 13), rep(2, 21), rep(3, 21))
+```
+
+
+### OPCW
+-  The literature does not suggest any larger changes in the
+   governance depth of the OPCW. The SYR inspections may be such an instance, but
+   the event is outside of my time of analysis.
+
+```{r}
+data$NB.gov.depth[which(data$IO == "OPCW")] <- 
+	rep(1, 15)
+```
+
+
+##NB-Open Governance Norm
+### IAEA
+-  The presence of the norm of open governance in the general public discourse, 
+expressed as percentages of n-grams, multiplied by 10 Millions (to scale up
+to other variables).
+-  Source: google books n-grams (http://books.google.com/ngrams/), 1945-2008: 
+keywords: `democratic deficit`,  `participatory governance`, `global democracy`
+-  Sum of percentages into one single indicator of `open governance norm presence`.
+
+
+```{r google_books, cache=T}
+# get json data from n-grams site
+url3 <-  "https://books.google.com/ngrams/graph?content=democratic+deficit%2Cparticipatory+governance%2Cglobal+democracy&case_insensitive=on&year_start=1957&year_end=2008&corpus=15&smoothing=0&share=&direct_url=t4%3B%2Cdemocratic%20deficit%3B%2Cc0%3B%2Cs0%3B%3Bdemocratic%20deficit%3B%2Cc0%3B%3BDemocratic%20Deficit%3B%2Cc0%3B%3BDemocratic%20deficit%3B%2Cc0%3B.t4%3B%2Cparticipatory%20governance%3B%2Cc0%3B%2Cs0%3B%3Bparticipatory%20governance%3B%2Cc0%3B%3BParticipatory%20Governance%3B%2Cc0%3B%3BParticipatory%20governance%3B%2Cc0%3B.t4%3B%2Cglobal%20democracy%3B%2Cc0%3B%2Cs0%3B%3Bglobal%20democracy%3B%2Cc0%3B%3BGlobal%20Democracy%3B%2Cc0%3B%3BGlobal%20democracy%3B%2Cc0%3B%3BGLOBAL%20DEMOCRACY%3B%2Cc0"
+
+ngram <- htmlParse(getURL(url3))
+ngram2 <- xpathSApply(ngram, "//script", xmlValue)[8]
+
+# clean up and convert to data table
+ngram2 <- gsub(pattern="\n  var data = ", x=ngram2, 
+						replacement = "")
+ngram2 <- gsub(pattern=
+		";\n  if (data.length > 0) {\n    ngrams.drawD3Chart(data, 1957, 2008, 1.0, \"main\");\n  }\n", 
+		x=ngram2, replacement = "", fixed=T)
+write(ngram2, file='ngram2')
+
+ngram3 <- fromJSON('ngram2')
+dem_def <- unlist(ngram3[[1]], use.names = F)
+part_gov <- unlist(ngram3[[2]], use.names = F)
+global_dem <- unlist(ngram3[[3]], use.names = F)
+
+# create data-frame and add years, first rows are junk, 
+# add missing values
+open_gov_norm <- data.frame(democratic.deficit = dem_def, 
+		participative.governance = part_gov, 
+		global.democracy = global_dem)
+open_gov_norm[56, ] <- c(NA, NA, NA)
+open_gov_norm[57, ] <- c(NA, NA, NA)
+open_gov_norm$year <- 1955:2011
+
+# add values of all three search terms and 
+# add to data-set 
+open_gov_norm$ogn <- 
+	as.numeric(as.character(open_gov_norm$democratic.deficit)) + 
+	as.numeric(as.character(open_gov_norm$participative.governance)) + 
+	as.numeric(as.character(open_gov_norm$global.democracy))
+
+# multiply with 10 Million and add to data table
+data$NB.og.norm <- rep(NA, 70)
+data$NB.og.norm[which(data$IO == "IAEA")] <- 
+	10000000 * open_gov_norm$ogn[3:57]
+```
+
+
+### OPCW
+
+-  The same data as for the OPCW.
+
+```{r}
+data$NB.og.norm[which(data$IO == "OPCW")] <- 
+	10000000 * open_gov_norm$ogn[43:57]
+```
+
+```{r data_nb_og_norm, warning=F, echo=F}
+ggplot(data, aes(x = Year, y = NB.og.norm, linetype = IO)) + 
+	geom_line() +
+	theme_minimal(base_size = 12, base_family = "Charis SIL") + 
+	theme(legend.position = "bottom")
+```
+
+
+# Raw Data
+
+```{r results='asis', echo=F, eval=T}
+# export data-table
+write.csv(data, 'raw-data.csv')
+```
+
+## Dependent Variables
+
+\begin{adjustbox}{center}
+\resizebox*{!}{21cm}{
+
+```{r table_outcome, results='asis', echo=FALSE}
+print(xtable(data[1:11], digits = 0), include.rownames=F, floating = F)
+```
+
+}
+\end{adjustbox}
+
+
+
+## Independent Variables
+\begin{landscape}
+\begin{adjustbox}{center}
+\resizebox*{!}{15cm}{
+```{r table_vars, results='asis', echo=FALSE}
+print(xtable(data[c(1, 2, 12:21)], digits = 0), include.rownames=F, floating = F)
+```
+}
+\end{adjustbox}
+\end{landscape}
+
+

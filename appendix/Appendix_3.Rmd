@@ -1,0 +1,704 @@
+---
+output:
+  html_document: default
+  pdf_document:
+    fig_crop: no
+    keep_tex: yes
+---
+
+```{r echo=FALSE}
+library(knitr)
+opts_chunk$set(cache=F, autodep=TRUE, out.width = "\\textwidth", fig.height = 6, fig.width = 8,  dpi = 300, warning=F, message=F, dev = "png")
+options(width = 86)
+```
+
+In the following appendix, I present the `R Code` to reproduce the 
+truth tables and analyses in Chapter 5. I do not print the truth tables, here, 
+as they are already included in the chapter. In addition, I add some 
+illustrations and graphs for the QCA analyses. Also, I show the results of some
+individual analyses that I do not present in chapter 5. They are for illustration
+purposes.
+
+First, I load the required R packages[^1]:
+```{r setup, message=FALSE}
+library(QCA)
+library(QCA3)
+library(wordcloud)
+library(SetMethods)
+library(car)
+library(VennDiagram)
+```
+
+[^1]: Dusa, Adrian and Alrik Thiem (2014). QCA: A Package for Qualitative Comparative Analysis. R package version 1.1-3. URL: http://cran.r-project.org/package=QCA.
+Fellows, Ian (2014). wordcloud: Word Clouds. R package version 2.5. URL: http://CRAN.R-project.org/package=wordcloud.
+Fox, John and Sanford Weisberg (2011). An {R} Companion to Applied Regression,  Second Edition. Thousand Oaks CA: Sage. URL: http://socserv.socsci.mcmaster.ca/jfox/Books/Companion.
+Huang, Ronggui. (2014). QCA3: Yet another package for Qualitative Comparative Analysis. R package version 0.0-7. URL: http://asrr.r-forge.r-project.org/.
+Quaranta, Mario  (2013). SetMethods: A Package Companion to "Set-Theoretic Methods for the Social Sciences". R package version 1.0. URL: http://CRAN.R-project.org/package=SetMethods.
+
+
+Next, I import the raw data and create an empty data-set for the QCA data:
+```{r import}
+data <- read.csv("../data/raw-data.csv")
+data$X <- NULL # clean up import artifact
+data$cases <-  paste(data$IO, data$Year, sep = "") # name cases
+data_qca <- as.data.frame(matrix(0, ncol = 0, nrow = 70))
+data_qca$cases <- data$cases
+# add case names as row names
+row.names(data_qca) <- data_qca$cases
+```
+
+
+
+#Calibration
+The following code-blocks show the steps I took to calibrate the data-set. Again, 
+the detailed description is included in Chapter 5.
+
+##Talk
+```{r}
+thr1 <- 1
+data_qca$TALK.Part <- c(thr1, 1, 1, thr1, thr1, rep(0, 31), rep(thr1, 5),
+            1,thr1, rep(1, 3), rep(thr1, 3), 1, rep(thr1, 4), 1, 0, 1, 1, 
+            rep(thr1, 10), 1, 1)
+data_qca$TALK.Trans <- c(rep(0, 36), rep(thr1, 9), 1, rep(thr1, 8), 1, 0, 
+            rep(thr1, 2), 1, thr1, thr1, 1, rep(thr1, 7), 1)
+```
+
+## Decision
+```{r}
+thr1 <- 0
+thr2 <- 1
+data_qca$DEC.Part <- c(rep(0, 15), rep(1, 4), rep(0, 36), rep(1, 7), 
+            rep(0,8))
+
+data_qca$DEC.Trans <- c(rep(0, 29), rep(thr1, 7), rep(thr2, 7), 
+            rep(1, 12), 0, thr1, rep(thr2, 11), rep(1, 2))
+```
+
+## Action
+```{r}
+data_qca$ACT.Part.1 <-  c(0, rep(1, 7), rep(0, 26), rep(1, 21), rep(1, 4), 
+            rep(0, 8), rep(1, 3))
+data_qca$ACT.Part.2 <-  c(rep(0, 51), rep(1, 4), rep(0, 12), rep(1, 3))
+data_qca$ACT.Part.4 <-  c(rep(0, 25), rep(1, 13), rep(0, 3), rep(1, 5), 
+            rep(0, 2), rep(1, 7), rep(0, 7), rep(1, 3),0, 0, 1, 1, 1)
+data_qca$ACT.Trans <- c(rep(0, 4), rep(1, 3), rep(0, 38), rep(1, 10),
+            rep(0, 7), rep(1, 4), rep(0, 4))
+```
+
+## Resource-based conditions
+```{r}
+thr1 <- 1
+data_qca$RB.Budget <-  c(rep(0, 26), rep(thr1, 4), rep(0, 6), rep(thr1, 9), 
+            rep(0, 10), rep(0, 2), rep(1, 4), rep(0, 6), rep(thr1, 3))
+data_qca$RB.Inequality <-  recode(data$RB.Inequality, 
+            recodes = "0:0.8126000=0; 0.8126313:0.9=1")
+data_qca$RB.Complexity <- c(rep(1, 55), rep(0, 15))
+```
+
+## Norm-based conditions
+```{r}
+thr1 <- 1
+data_qca$NB.visibility.all <-  c(rep(0, 29), rep(thr1, 5), rep(1, 4), 
+            rep(thr1, 7), rep(1, 6), rep(thr1, 3), 1, rep(0, 15))
+data_qca$NB.visibility.hl <-  c(rep(0, 29), rep(1, 3), rep(0, 10), 
+            rep(1, 5), rep(0, 5), rep(1, 3), rep(0, 15))
+data_qca$NB.gov.depth <- c(rep(0, 13), rep(0, 21), rep(1, 21), rep(0, 15))
+data_qca$NB.dem.mem <-  c(rep(0, 36), rep(1, 19), rep(0, 7), rep(1, 8))
+data_qca$NB.og.norm <-  c(rep(0, 33), rep(thr1, 6), rep(1, 16), rep(1, 15))
+
+```
+
+# QCA analyses
+Next, I present the analysis of the individual outcome variables and of some
+combined outcomes. In the analysis for sufficiency, I limit the presentation
+to the intermediate solution for those analyses I do not present in more
+detail in Chapter 5.
+
+## Participation Talk
+```{r part_talk}
+#truth table w/o IAEA1957:1961, OPCW 1997
+data_qca$TALKPART <- data_qca$TALK.Part # for QCA package conventions
+tt <- truthTable(data_qca[c(6:55, 57:70), c(18, 10:17)], outcome = 
+            c("TALKPART"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+
+# necessary conditions for participation talk
+superSubset(data_qca[c(6:55, 57:70), c(18, 10:17)], outcome = 
+            "TALKPART", relation="necessity", incl.cut=1, cov.cut=0.8)
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(6:55, 57:70), c(18, 10:17)], outcome = 
+            "TALKPART", relation="necessity", incl.cut=1, cov.cut=1, 
+            neg.out = T)
+```
+
+```{r talk_part_nc, echo=FALSE, eval = F}
+textplot(x = data_qca$NB.og.norm[c(6:55, 57:70)], 
+    y = data_qca$TALKPART[c(6:55, 57:70)], 
+    words = data_qca$cases[c(6:55, 57:70)], 
+    xlim = c(0, 1), ylim = c(0, 1), 
+    xlab="Open Governance Norm", ylab="Participation Talk")
+ polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+ abline(0, 1)
+```
+
+
+
+```{r}
+## sufficient conditions without nc og.norm
+tt <- truthTable(data_qca[c(6:55, 57:70), c(18, 10:16)], 
+            outcome = c("TALKPART"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, 
+            dir.exp = c(rep(1, 7)))
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(6:55, 57:70), c(18, 10:16)], 
+            outcome = c("TALKPART"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE, neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+```
+
+
+```{r talk_part_sc, echo=FALSE, eval = F}
+sc.plot.x <- fsor(fsand(data_qca$RB.Budget, fsnot(data_qca$RB.Complexity)), fsand(data_qca$RB.Complexity, data_qca$NB.visibility.all, data_qca$NB.gov.depth, data_qca$NB.dem.mem))[c(6:55, 57:70)]
+sc.plot.y <- data_qca$TALKPART[c(6:55, 57:70)]
+sc.plot.w <- data_qca$cases[c(6:55, 57:70)]
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Participation Talk", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+
+## Transparency Talk
+```{r, eval = T}
+data_qca$TALKTRANS <- data_qca$TALK.Trans # for QCA package conventions
+tt <- truthTable(data_qca[c(1:55, 57:70), c(19, 10:17)], 
+            outcome = c("TALKTRANS"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(1:55, 57:60), c(19, 10:17)], outcome = "TALKTRANS", 
+            relation="nec", incl.cut=0.9, cov.cut=0.76) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(1:55, 57:60), c(19, 10:17)], outcome = "TALKTRANS", 
+            relation="nec", incl.cut=0.9, cov.cut=0.76, neg.out = T) 
+```
+
+```{r talk_trans_nc, echo=FALSE, eval = F}
+textplot(x = data_qca$NB.og.norm[c(1:55, 57:70)], y = data_qca$TALKTRANS[c(1:55, 57:70)], words = data_qca$cases[c(1:55, 57:70)], xlim = c(0, 1), ylim = c(0, 1), xlab="Open Governance Norm", ylab="Transparency Talk")
+polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+abline(0, 1)
+```
+
+```{r, eval=T}
+# sufficient conditions, w/o og. norm
+tt <- truthTable(data_qca[c(1:55, 57:70), c(19, 10:16)], 
+            outcome = c("TALKTRANS"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 7)))
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(1:55, 57:70), c(19, 10:16)], 
+            outcome = c("TALKTRANS"), incl.cut1=0.8, sort.by="incl", 
+            show.cases = TRUE, neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+```
+
+```{r talk_trans_sc,  echo=FALSE, eval = F}
+sc.plot.x <- fsor(fsand(data_qca$RB.Budget, fsnot(data_qca$RB.Complexity)), fsand(data_qca$RB.Complexity, data_qca$NB.visibility.all, data_qca$NB.gov.depth, data_qca$NB.dem.mem))[c(1:55, 57:70)]
+sc.plot.y <- data_qca$TALKTRANS[c(1:55, 57:70)]
+sc.plot.w <- data_qca$cases[c(1:55, 57:70)]
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Transparency Talk", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+## Combined Talk
+```{r talk}
+#truth table
+data_qca$TALK <- fsor(data_qca$TALK.Part, 
+            data_qca$TALK.Trans) # for QCA package conventions
+
+tt <- truthTable(data_qca[c(20, 10:11, 13:17)], outcome = 
+            c("TALK"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+
+# necessary conditions for participation talk
+superSubset(data_qca[c(20, 10:17)], outcome = 
+            "TALK", relation="necessity", incl.cut=0.8, cov.cut=0.8)
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(20, 10:17)], outcome = 
+            "TALK", relation="necessity", incl.cut=0.8, cov.cut=0.8,
+            neg.out = T)
+```
+
+```{r talk_nc, echo=F}
+textplot(x = data_qca$NB.og.norm, 
+    y = data_qca$TALK, 
+    words = data_qca$cases,
+    xlim = c(0, 1), ylim = c(0, 1), 
+    xlab="Open Governance Norm", ylab="Talk")
+ polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+ abline(0, 1)
+```
+
+```{r talk_nc_venn, echo = F}
+nc_talk <- superSubset(data_qca[c(20, 10:17)], outcome = 
+            "TALK", relation="necessity", incl.cut=0.8, cov.cut=0.8)
+nc_talk <- nc_talk$coms
+
+venn <- venn.diagram(
+x = list(
+ "TALK" = which(data_qca$TALK == 1),
+ "OG.NORM" = which(nc_talk[ , 1] == 1)),
+filename = NULL,
+scaled = T,
+ fill = gray(c(0.9, 0.5))
+ )
+ grid.draw(venn)
+```
+
+
+```{r, eval = T}
+## sufficient conditions without nc og.norm
+tt <- truthTable(data_qca[c(20, 10:11, 13:16)], 
+            outcome = c("TALK"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+# conservative solution
+eqmcc(tt, show.cases = TRUE, details = TRUE)
+
+# intermediary solution
+intermed.sol <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, 
+            dir.exp = c(rep(1, 6)))
+intermed.sol
+# parsimonious solution
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(20, 10:11, 13:16)], 
+            outcome = c("TALK"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE, neg.out = T)
+sc <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, 
+            dir.exp = c(rep(1, 6)))
+
+sc$i.sol$C1P1$IC
+```
+
+
+```{r talk_sc, echo=FALSE, eval = T}
+sc.plot.x <- fsor(fsand(data_qca$RB.Budget, data_qca$RB.Inequality),
+                  fsand(data_qca$RB.Inequality, data_qca$NB.dem.mem),
+                  fsand(data_qca$NB.visibility.all, data_qca$NB.dem.mem, data_qca$NB.gov.depth))
+sc.plot.y <- data_qca$TALK
+sc.plot.w <- data_qca$cases
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Participation Talk", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+
+```{r talk_sc_venn, echo = F}
+PIms <- intermed.sol$i.sol$C1P1$pims
+library(VennDiagram)
+venn <- venn.diagram(x = list(
+"TALK" = which(data_qca$TALK == 1),
+"BUDG*INEQ" = which(PIms[ , 1] == 1),
+"INEQ*DEM.MEM" = which(PIms[ , 2] == 1),
+"VIS*GOV*DEM.MEM" = which(PIms[ , 3] == 1)),
+filename = NULL,
+fill = gray(c(0.3, 0.5, 0.7, 0.9))
+)
+
+grid.draw(venn)
+```
+
+
+## Participation Decision
+```{r, eval = T}
+data_qca$DECPART <- data_qca$DEC.Part # for QCA package conventions
+
+tt <- truthTable(data_qca[c(21, 10:17)], 
+            outcome = c("DECPART"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+superSubset(data_qca[c(21, 10:17)], outcome = "DECPART", 
+            relation="nec", incl.cut=0.6, cov.cut=0.7) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(21, 10:17)], outcome = "DECPART", 
+            relation="nec", incl.cut=0.8, cov.cut=0.9, neg.out = T) 
+# sufficient conditions
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 8)))
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(1:15, 20:70), c(21, 10:17)], 
+            outcome = c("DECPART"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE, neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, 
+            dir.exp = c(rep(1, 8)))
+```
+
+```{r part_dec_sc, echo=FALSE, eval = F}
+sc.plot.x <- fsand(fsnot(data_qca$NB.dem.mem[c(1:15, 20:70)]), data_qca$RB.Inequality[c(1:15, 20:70)])
+sc.plot.y <- data_qca$DECPART[c(1:15, 20:70)]
+sc.plot.w <- data_qca$cases[c(1:15, 20:70)]
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Participation Decisions", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+
+## Transparency Decision
+```{r, eval = T}
+data_qca$DECTRANS <- data_qca$DEC.Trans # for QCA package conventions
+tt <- truthTable(data_qca[c(1:55, 57:70), c(22, 10:17)], 
+            outcome = c("DECTRANS"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(1:55, 57:70), c(22, 10:17)], outcome = "DECTRANS", 
+            relation="nec", incl.cut=0.9, cov.cut=0.8) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(1:55, 57:70), c(22, 10:17)], outcome = "DECTRANS", 
+            relation="nec", incl.cut=0.9, cov.cut=0.8, neg.out = T) 
+```
+
+```{r dec_trans_nc, echo=FALSE, eval = F}
+textplot(x = data_qca$NB.og.norm[c(1:55, 57:70)], y = data_qca$DECTRANS[c(1:55, 57:70)], words = data_qca$cases[c(1:55, 57:70)], xlim = c(0, 1), ylim = c(0, 1), xlab="Open Governance Norm", ylab="Transparency Decisions")
+polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+abline(0, 1)
+```
+
+```{r, eval = T}
+# sufficient conditions w/o og.norm
+tt <- truthTable(data_qca[c(1:55, 57:70), c(22, 10:16)], 
+            outcome = c("DECTRANS"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 7)))
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(1:55, 57:70), c(22, 10:16)], 
+            outcome = c("DECTRANS"), incl.cut1=0.8, sort.by="incl", 
+            show.cases = TRUE, neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 7)))
+
+```
+
+```{r dec_trans_sc, echo=FALSE, eval = F}
+sc.plot.x <- fsor(data_qca$NB.dem.mem, data_qca$NB.visibility.hl, data_qca$RB.Inequality)
+sc.plot.y <- data_qca$DECTRANS
+sc.plot.w <- data_qca$cases
+
+textplot(x = sc.plot.x[c(1:55, 57:70)], y = sc.plot.y[c(1:55, 57:70)], words = sc.plot.w[c(1:55, 57:70)], xlim = c(0, 1), ylim = c(0, 1), ylab="Transparency Decisions", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+## Combined Decision
+```{r DEC, eval = T}
+data_qca$DECISION <- fsor(data_qca$DEC.Part, data_qca$DEC.Trans)
+
+tt <- truthTable(data_qca[c(23, 10:11, 13:17)], outcome = c("DECISION"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(23, 10:11, 13:17)], outcome = "DECISION", 
+            relation="nec", incl.cut=0.8, cov.cut=0.5)
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(23, 10:11, 13:17)], outcome = "DECISION", 
+            relation="nec", incl.cut=0.8, cov.cut=0.878, 
+            neg.out = T)
+```
+
+```{r decision_nc, echo=FALSE, eval = T}
+textplot(x = data_qca$NB.og.norm, 
+         y = data_qca$DECISION, 
+         words = data_qca$cases, 
+         xlim = c(0, 1), ylim = c(0, 1), 
+         xlab="Open Governance Norm", 
+         ylab="Transparency Decisions")
+polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+abline(0, 1)
+```
+
+
+```{r dec_nc_venn, echo = F}
+nc_dec <- superSubset(data_qca[c(23, 10:11, 13:17)], outcome = "DECISION", 
+            relation="nec", incl.cut=0.8, cov.cut=0.5)
+nc_dec <- nc_dec$coms
+
+venn <- venn.diagram(
+x = list(
+ "DECISION" = which(data_qca$DECISION == 1),
+ "OG.NORM" = which(nc_dec[ , 1] == 1)),
+filename = NULL,
+scaled = T,
+ fill = gray(c(0.9, 0.5))
+ )
+ grid.draw(venn)
+```
+
+```{r, eval = T}
+# sufficient conditions, w/o OG.Norm
+tt <- truthTable(data_qca[c(23, 10:11, 13:16)], outcome = c("DECISION"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+
+# conservative
+eqmcc(tt, show.cases = TRUE, details = TRUE)
+
+# intermediate
+intermed.sol <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 6)))
+intermed.sol
+# parsimonious
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+
+#factorize(sc)
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(23, 10:11, 13:17)], outcome = c("DECISION"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE,
+            neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+```
+
+
+```{r dec_sc, echo=FALSE, eval = T}
+sc.plot.x <- fsor(data_qca$RB.Inequality, 
+                  fsand(data_qca$NB.visibility.all, data_qca$NB.gov.depth,
+                        data_qca$NB.dem.mem))
+sc.plot.y <- data_qca$DECISION
+sc.plot.w <- data_qca$cases
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Transparency Decisions", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+```{r dec_sc_venn, echo = F}
+PIms <- intermed.sol$i.sol$C1P1$pims
+library(VennDiagram)
+venn <- venn.diagram(x = list(
+"DECISION" = which(data_qca$DECISION == 1),
+"INEQ" = which(PIms[ , 1] == 1),
+"VIS*GOV.DEPTH*DEM.MEM" = which(PIms[ , 2] == 1)),
+filename = NULL,
+fill = gray(c(0.9, 0.5, 0.7))
+)
+
+grid.draw(venn)
+```
+
+## Participation Action: No. of NGOs
+
+```{r, eval = T}
+data_qca$ACTPART1 <- data_qca$ACT.Part.1 # for QCA package conventions
+tt <- truthTable(data_qca[c(24, 10:17)], outcome = c("ACTPART1"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(24, 10:17)], outcome = "ACTPART1", 
+            relation="nec", incl.cut=0.8, cov.cut=0.6) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(24, 10:17)], outcome = "ACTPART1", 
+            relation="nec", incl.cut=0.9, cov.cut=0.6, neg.out = T) 
+# sufficient conditions
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 8)))
+
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(24, 10:17)], outcome = c("ACTPART1"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE, 
+            neg.out = T)
+sc <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sc$essential
+```
+
+
+```{r act_part_ngos1_sc, echo=FALSE, eval = F}
+sc.plot.x <- fsand(data_qca$NB.dem.mem, fsor(data_qca$RB.Budget, 
+            data_qca$NB.gov.depth, data_qca$NB.visibility.all))
+sc.plot.y <- data_qca$ACTPART1
+sc.plot.w <- data_qca$cases
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Participation Action, NGOs", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+
+
+## Participation Action: No. of NGO representatives
+```{r, eval = T}
+data_qca$ACTPART2 <- data_qca$ACT.Part.2 # for QCA package conventions
+tt <- truthTable(data_qca[c(25, 10:17)], outcome = c("ACTPART2"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(25, 10:17)], outcome = "ACTPART2", 
+            relation="nec", incl.cut=0.8, cov.cut=0.5)
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(25, 10:17)], outcome = "ACTPART2", 
+            relation="nec", incl.cut=0.8, cov.cut=0.92, 
+            neg.out = T)
+# sufficient conditions
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 8)))
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(25, 10:17)], outcome = c("ACTPART2"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE,
+            neg.out = T)
+sc <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sc$essential
+```
+
+## Participation Action: Participation events
+
+```{r ACT.Part.4, eval=T, eval = T}
+data_qca$ACTPART4 <- data_qca$ACT.Part.4 # for QCA package conventions
+tt <- truthTable(data_qca[c(26, 10:17)], outcome = c("ACTPART4"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(26, 10:17)], outcome = "ACTPART4", 
+            relation="nec", incl.cut=0.9, cov.cut=0.7) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(26, 10:17)], outcome = "ACTPART4", 
+            relation="nec", incl.cut=0.9, cov.cut=0.63,
+            neg.out = T)
+```
+
+```{r act_part_events, echo=FALSE, eval = F}
+nc.x <- fsor(data_qca$RB.Budget, data_qca$NB.visibility.all, data_qca$NB.dem.mem)
+textplot(x = nc.x, y = data_qca$ACTPART4, words = data_qca$cases, xlim = c(0, 1), ylim = c(0, 1), xlab="Set of functionally equivalent necessary conditions", ylab="Participation events")
+polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+abline(0, 1)
+```
+
+```{r, eval = T}
+# sufficient conditions
+tt <- truthTable(data_qca[c(26, 10:17)], outcome = c("ACTPART4"), 
+            incl.cut1=0.8, sort.by="incl", show.cases = TRUE)
+# use parsimonious solution here. 
+sc <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sc$essential
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(26, 10:17)], outcome = c("ACTPART4"), 
+            incl.cut1=1, sort.by="incl", show.cases = TRUE, 
+            neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 8)))
+```
+
+## Participation Action
+```{r act_part_all, eval = T}
+data_qca$ACTPART <- fsor(data_qca$ACTPART1, 
+            data_qca$ACTPART2, data_qca$ACTPART4)
+tt <- truthTable(data_qca[c(27, 10:11, 13:17)], 
+            outcome = c("ACTPART"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(27, 10:11, 13:17)], outcome = "ACTPART", 
+            relation="nec", incl.cut=1, cov.cut=0.6) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(27, 10:11, 13:17)], outcome = "ACTPART", 
+            relation="nec", incl.cut=0.9, cov.cut=0.4, neg.out = T) 
+# conservative solution
+sc <- eqmcc(tt, show.cases = T, details = T)
+sc$essential
+# intermed
+intermed.sol <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 7)))
+intermed.sol
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+```
+
+```{r act_part_sc, echo=FALSE, eval = T}
+sc.plot.x <- fsor(data_qca$NB.visibility.all,
+                  fsand(data_qca$RB.Budget, fsnot(data_qca$RB.Inequality)),
+                  fsand(data_qca$RB.Budget, data_qca$NB.dem.mem, data_qca$NB.og.norm))
+sc.plot.y <- data_qca$ACTPART
+sc.plot.w <- data_qca$cases
+
+textplot(x = sc.plot.x, y = sc.plot.y, words = sc.plot.w, xlim = c(0, 1), ylim = c(0, 1), ylab="Participation Action", xlab="Set of Sufficient Conditions")
+polygon(x=c(0.5, 0.5, 1, 1), y=c(0, 0.5, 0.5, 0))
+abline(0, 1)
+```
+
+```{r actpart_all_venn, echo = F}
+PIms <- intermed.sol$i.sol$C1P1$pims
+library(VennDiagram)
+venn <- venn.diagram(x = list(
+"PART.ACT" = which(data_qca$ACTPART == 1),
+"VIS" = which(PIms[ , 1] == 1),
+"BUDG*og.norm" = which(PIms[ , 2] == 1),
+"BUDG*INEQ*DEM.MEM" = which(PIms[ , 3] == 1)),
+filename = NULL,
+fill = gray(c(0.3, 0.5, 0.7, 0.9))
+)
+
+grid.draw(venn)
+```
+
+## Transparency Action
+
+```{r, eval = T}
+data_qca$ACTTRANS <- data_qca$ACT.Trans # for QCA package conventions
+tt <- truthTable(data_qca[c(28, 10:11, 13:17)], 
+            outcome = c("ACTTRANS"), incl.cut1=0.8, sort.by="incl", 
+            show.cases = TRUE)
+# necessary conditions
+superSubset(data_qca[c(28, 10:11, 13:17)], outcome = "ACTTRANS", 
+            relation="nec", incl.cut=0.8, cov.cut=0.37) 
+# neg. outcome, to check for contradictions
+superSubset(data_qca[c(28, 10:11, 13:17)], outcome = "ACTTRANS", 
+            relation="nec", incl.cut=1, cov.cut=0.4, neg.out = T) 
+```
+
+```{r transp_act_nc, echo=FALSE, eval = T}
+textplot(x = data_qca$NB.dem.mem, y = data_qca$ACTTRANS, words = data_qca$cases, xlim = c(0, 1), ylim = c(0, 1), xlab="Presence of Democratic Members", ylab="Transparency Action")
+polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+abline(0, 1)
+```
+
+```{r transp_act_nc2, echo=FALSE, eval = T}
+textplot(x = data_qca$NB.og.norm, y = data_qca$ACTTRANS, words = data_qca$cases, xlim = c(0, 1), ylim = c(0, 1), xlab="Presence of Governance Norm", ylab="Transparency Action")
+polygon(x=c(0, 0.5, 0.5, 0), y=c(0.5, 0.5, 1, 1))
+abline(0, 1)
+```
+
+```{r transp_act_all_nc_venn, echo = F}
+nc_transpart <- superSubset(data_qca[c(28, 10:11, 13:17)], outcome = "ACTTRANS", 
+            relation="nec", incl.cut=0.8, cov.cut=0.37) 
+nc_transpart <- nc_transpart$coms
+
+venn <- venn.diagram(
+x = list(
+"ACT.TRANSP" = which(data_qca$ACTTRANS == 1),
+"OG.NORM" = which(nc_transpart[ , 1] == 1),
+"DEM.MEM" = which(nc_transpart[ , 2] == 1)),
+filename = NULL,
+scaled = T,
+ fill = gray(c(0.9, 0.5, 0.3))
+ )
+ grid.draw(venn)
+```
+
+```{r, eval = T}
+#sufficient condition, without democratic members
+tt <- truthTable(data_qca[c(28, 10:11, 13:15, 17)], 
+            outcome = c("ACTTRANS"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE)
+eqmcc(tt, show.cases = TRUE, details = TRUE)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE,
+            dir.exp = c(rep(1, 6)))
+sc <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sc$solution
+# neg. outcome, to check for contradictions
+tt <- truthTable(data_qca[c(28, 10:11, 13:15, 17)], 
+            outcome = c("ACTTRANS"), incl.cut1=1, sort.by="incl", 
+            show.cases = TRUE, neg.out = T)
+eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, 
+            dir.exp = c(rep(1, 6)))
+```
+
+
+
+```{r export, echo = F}
+write.csv2(data_qca, file = "data_qca.csv")
+```
+

@@ -1,0 +1,205 @@
+---
+title: "Participation events categorization"
+author: "Tobias Weise"
+output:
+  html_document: default
+  pdf_document:
+    keep_tex: yes
+---
+
+
+This appendix illustrates the grouping of the participation events data. 
+Methodologically, I use a simple keyword search on all codings of a year. 
+The original coding data can be retrieved by opening the `IAEA.rqda` and 
+`OPCW.rqda` files with the `RQDA` software package\footnote{HUANG, Ronggui.
+(2014). RQDA: R-based Qualitative Data Analysis. R package version 0.2-7. 
+URL http://rqda.r-forge.r-project.org/.}.
+
+For the keyword classification, I extracted all ACT.Part codings from the
+files and copied them to text files for each year. The search is thus only
+performed on those parts of texts of the Annual Reports that I coded 
+qualitatively as relevant statements about participation events.
+
+The following packages were used for the analysis\footnote{
+David B. Dahl (2014). xtable: Export tables to LaTeX or HTML. R package  version 1.7-4. http://CRAN.R-project.org/package=xtable.
+Ingo Feinerer and Kurt Hornik (2014). tm: Text Mining Package. R package  version 0.6. http://CRAN.R-project.org/package=tm. 
+Kurt Hornik, David Meyer and Christian Buchta (2014). slam: Sparse Lightweight Arrays and Matrices. R package version 0.1-32. http://CRAN.R-project.org/package=slam.
+Hadley Wickham and Romain Francois (2014). dplyr: A Grammar of Data Manipulation. R package version 0.3.0.2. http://CRAN.R-project.org/package=dplyr.
+Hadley Wickham (2009) ggplot2: elegant graphics for data analysis. Springer New York, 2009.
+Hadley Wickham (2007). Reshaping Data with the reshape Package. Journal of Statistical Software, 21(12), 1-2.
+}:
+```{r, message=F}
+library(tm)
+library(slam)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(xtable)
+```
+
+# IAEA
+In the first step I create a corpus from the annual codings and 
+pre-process the texts to remove stopwords, punctuation and upper case
+letters. Next, I create a document term matrix, which includes the
+freuqnecy of each term in each document. The matrix is then used to 
+extract relevant search terms.
+
+```{r, message=F}
+corpus <- Corpus(DirSource("../data/corpora/iaea-part-events/", encoding="UTF-8"),
+			readerControl=list(language="en"))
+corpusVars <- data.frame(var1=factor(rep("", length(corpus))), 
+			row.names=names(corpus))
+dtmCorpus <- corpus
+dtmCorpus <- tm_map(dtmCorpus, content_transformer(tolower))
+dtmCorpus <- tm_map(dtmCorpus, content_transformer(function(x) 
+			gsub("(['’\n]|[[:punct:]]|[[:space:]]|[[:cntrl:]])+",
+					 " ", x)))
+dtmCorpus <- tm_map(dtmCorpus, removeNumbers)
+dtm <- DocumentTermMatrix(dtmCorpus, control=list(tolower=FALSE, 
+					wordLengths=c(2, Inf)))
+rm(dtmCorpus)
+dictionary <- data.frame(row.names=colnames(dtm), 
+				"Occurrences"=col_sums(dtm),   
+				"Stopword"=ifelse(colnames(dtm) %in% stopwords("en"), 
+				"Stopword", ""),   stringsAsFactors=FALSE)
+dtm <- dtm[, !colnames(dtm) %in% stopwords("en")]
+attr(dtm, "dictionary") <- dictionary
+rm(dictionary)
+meta(corpus, type="corpus", tag="language") <- 
+	attr(dtm, "language") <- "en"
+meta(corpus, type="corpus", tag="processing") <- 
+	attr(dtm, "processing") <- c(lowercase=TRUE, punctuation=TRUE, 
+					digits=TRUE, stopwords=TRUE, stemming=FALSE, 
+					customStemming=FALSE, twitter=FALSE, 
+					removeHashtags=NA, removeNames=NA)
+corpus
+dtm
+```
+
+
+In the second step, I first collect all search terms that still have 
+different orthography. Second, I group them together according to the
+overarching topics of `Science`, `Training`, and `Advise`.
+
+```{r}
+terms <- as.data.frame(as.matrix(dtm)) 
+terms$Year <- 1957:2011
+
+## combine relevant terms
+terms$WORKSHOP <- terms$workshop + terms$workshops + 
+	terms$workshopsí
+terms$SEMINAR <- terms$seminar + terms$seminarí + 
+	terms$seminars +terms$seminarsã
+terms$TRAINING <- terms$training + terms$trainingí
+terms$MEETING <- terms$meeting + terms$meetingís + 
+	terms$meetings
+terms$COURSE <- terms$course + terms$courses 
+terms$PANEL <- terms$panel + terms$panelonthe + 
+	terms$panels
+terms$CONSULTANT <- terms$consultant + 
+	terms$consultants
+terms$SYMPOSIA <- terms$symposia + terms$symposium
+terms$NETWORK <- terms$network + terms$networki + 
+	terms$networkís + terms$networks
+terms$ADVISOR <- terms$advisor + terms$advisory
+
+## create term categories
+terms$GROUP_SCIENCE <- terms$SEMINAR + terms$PANEL + 
+	terms$SYMPOSIA
+terms$GROUP_TRAINING <- terms$TRAINING + terms$COURSE + 
+	terms$WORKSHOP
+terms$GROUP_ADVICE <- terms$MEETING + terms$CONSULTANT + 
+	terms$NETWORK + terms$ADVISOR
+
+
+write.csv(terms, file = "coding_terms.csv")
+
+terms2 <- terms %>% select(Year, WORKSHOP, SEMINAR, TRAINING, 
+						MEETING, COURSE, PANEL, CONSULTANT, SYMPOSIA, 
+						NETWORK, GROUP_SCIENCE, GROUP_TRAINING, 
+						GROUP_ADVICE)
+write.csv(terms2, file = "iaea-participation-events.csv")
+```
+
+```{r, results='asis', echo=FALSE}
+print(xtable(terms2, digits = 0), include.rownames=F, floating = F)
+```
+
+
+# OPCW
+
+Again, in the first step I create a corpus from the annual codings and 
+pre-process the texts to remove stopwords, punctuation and upper case
+letters.
+
+```{r, message=F}
+corpus <- Corpus(DirSource("../data/corpora/opcw-part-events/", encoding="UTF-8"), 
+					readerControl=list(language="en"))
+corpusVars <- data.frame(var1=factor(rep("", length(corpus))), 
+					row.names=names(corpus))
+dtmCorpus <- corpus
+dtmCorpus <- tm_map(dtmCorpus, content_transformer(tolower))
+dtmCorpus <- tm_map(dtmCorpus, 
+	content_transformer(function(x) 
+	gsub("(['’\n]|[[:punct:]]|[[:space:]]|[[:cntrl:]])+", " ", x)))
+dtmCorpus <- tm_map(dtmCorpus, removeNumbers)
+dtm <- DocumentTermMatrix(dtmCorpus, 
+					control=list(tolower=FALSE, wordLengths=c(2, Inf)))
+rm(dtmCorpus)
+dictionary <- data.frame(row.names=colnames(dtm), 
+					"Occurrences"=col_sums(dtm),   
+					"Stopword"=ifelse(colnames(dtm) %in% stopwords("en"), 
+					"Stopword", ""),   stringsAsFactors=FALSE)
+dtm <- dtm[, !colnames(dtm) %in% stopwords("en")]
+attr(dtm, "dictionary") <- dictionary
+rm(dictionary)
+meta(corpus, type="corpus", tag="language") <- 
+	attr(dtm, "language") <- "en"
+meta(corpus, type="corpus", tag="processing") <- 
+	attr(dtm, "processing") <- c(lowercase=TRUE, punctuation=TRUE, 
+					digits=TRUE, stopwords=TRUE, stemming=FALSE, 
+					customStemming=FALSE, twitter=FALSE, 
+					removeHashtags=NA, removeNames=NA)
+corpus
+dtm
+```
+
+
+In the second step, I first collect all search terms that still have 
+different orthography. Second, I group them together according to the
+overarching topics of `Science`, `Training`, and `Advise`.
+
+```{r}
+terms <- as.data.frame(as.matrix(dtm)) 
+terms$Year <- 1997:2011
+
+## combine relevant terms
+terms$WORKSHOP <- terms$workshop + terms$workshops + terms$workshopin
+terms$SEMINAR <- terms$seminar + terms$seminars +terms$seminarfrom
+terms$TRAINING <- terms$training
+terms$MEETING <- terms$meeting + terms$meetings
+terms$COURSE <- terms$course + terms$courseswere + 
+	terms$coursebefore + terms$coursefor + terms$courses + 
+	terms$courseswere 
+terms$PANEL <- terms$panelists
+terms$SYMPOSIA <- terms$symposium
+terms$NETWORK <- terms$network
+terms$ADVISOR <- terms$advisory + terms$adviser
+
+## create term categories
+terms$GROUP_SCIENCE <- terms$SEMINAR + terms$PANEL + terms$SYMPOSIA
+terms$GROUP_TRAINING <- terms$TRAINING + terms$COURSE + terms$WORKSHOP
+terms$GROUP_ADVICE <- terms$MEETING + terms$NETWORK + terms$ADVISOR
+
+
+write.csv(terms, file = "coding_terms_opcw.csv")
+
+terms2 <- terms %>% select(Year, WORKSHOP, SEMINAR, TRAINING, 
+				    MEETING, COURSE, PANEL, SYMPOSIA, NETWORK, 
+				    GROUP_SCIENCE, GROUP_TRAINING, GROUP_ADVICE)
+write.csv(terms2, file = "opcw-participation-events.csv")
+```
+
+```{r, results='asis', echo=FALSE}
+print(xtable(terms2, digits = 0), include.rownames=F, floating = F)
+```

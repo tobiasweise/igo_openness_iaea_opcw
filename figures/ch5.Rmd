@@ -1,0 +1,546 @@
+# Chapter 5
+
+```{r setup, cache=FALSE, echo=T, message=F, warning=F}
+set.seed(7712) # for reproduction
+# global chunk options
+library(knitr)
+opts_chunk$set(cache=T, autodep=TRUE, out.width = "\\textwidth", fig.height = 6, fig.width = 8,  dpi = 300, warning=F, echo=T, dev = "png", cache = T)
+
+data <- read.csv("../data/raw-data.csv")
+data$X <- NULL # clean up import artifact
+data$cases <-  paste(data$IO, data$Year, sep = "") # name cases
+data_qca <- as.data.frame(matrix(0, ncol = 0, nrow = 70))
+data_qca$cases <- data$cases
+
+library(grid)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+# for some nice fonts
+library(extrafont)
+library(QCA)
+library(quantmod)
+library(car)
+library(xtable)
+#font_import() # run the first time on a system, #fonts() to list available fonts
+#loadfonts()
+## use colour scheme: http://www.colourlovers.com/palette/1419154/CENSORED.
+#load multiplot function from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+source("multiplot.R")
+#$
+```
+
+
+
+```{r qca_talk, eval=T, echo=T, fig.cap="Calibrating Talk"}
+#create qca values
+thr1 <- 1
+data_qca$TALK.Part <- c(thr1, 1, 1, thr1, thr1, rep(0, 31), rep(thr1, 5), 1,thr1, rep(1, 3), rep(thr1, 3), 1, rep(thr1, 4), 1,
+                        0, 1, 1, rep(thr1, 10), 1, 1)
+#plot, size represents set membership
+p1 <- ggplot(data, aes(y=TALK.Part, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$TALK.Part)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("Instances of Participation Talk") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+#same for transparency
+data_qca$TALK.Trans <- c(rep(0, 36), rep(thr1, 9), 1, rep(thr1, 8), 1,
+                         0, rep(thr1, 2), 1, thr1, thr1, 1, rep(thr1, 7), 1)
+
+p2 <- ggplot(data, aes(y=TALK.Trans, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$TALK.Trans)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "bottom") + ylab("Instances of Transparency Talk") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+multiplot(p1, p2)
+```
+
+
+
+```{r qca_decision, echo=T}
+thr1 <- 0
+thr2 <- 1
+
+data_qca$DEC.Part <- c(rep(0, 15), rep(1, 4), rep(0, 36),
+                       rep(1, 7), rep(0,8))
+
+data_qca$DEC.Trans <- c(rep(0, 29), rep(thr1, 7), rep(thr2, 7), rep(1, 12),
+                        0, thr1, rep(thr2, 11), rep(1, 2))
+```
+
+
+
+```{r qca_action, echo=T, warning=F, eval=T, fig.cap="Calibrating Action", fig.height=10}
+data_qca$ACT.Part.1 <-  c(0, rep(1, 7), rep(0, 26), rep(1, 21),
+                          rep(1, 4), rep(0, 8), rep(1, 3))
+
+
+p1 <-  ggplot(data, aes(y=ACT.Part.1, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$ACT.Part.1)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("NGOs at Conference") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+data_qca$ACT.Part.2 <-  c(rep(0, 51), rep(1, 4),
+                          rep(0, 12), rep(1, 3))
+
+p2 <-    ggplot(data, aes(y=ACT.Part.2, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$ACT.Part.2)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("NGO Representatives at Conference") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+data_qca$ACT.Part.4 <-  c(rep(0, 25), rep(1, 13), rep(0, 3), rep(1, 5), rep(0, 2), rep(1, 7),
+                          rep(0, 7), rep(1, 3),0, 0, 1, 1, 1)
+
+p3 <- ggplot(data, aes(y=ACT.Part.4, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$ACT.Part.4)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("Participation Events") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+data_qca$ACT.Trans <- c(rep(0, 4), rep(1, 3), rep(0, 38), rep(1, 10),
+                        rep(0, 7), rep(1, 4), rep(0, 4))
+
+p4 <- ggplot(data, aes(y=ACT.Trans.1, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$ACT.Trans)),  color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "bottom") + ylab("PubInf Budget") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+multiplot(p1, p2, p3, p4)
+```
+
+
+
+```{r print_outcome, echo=T, warning=F, results="asis"}
+print(xtable(data_qca[c(1:8)], digits = 0, caption = "Openness Crisp Set"),  include.rownames=F, floating = F, booktabs = T, size = "scriptsize",  tabular.environment = "longtable", caption.placement = "top", label="tab:print_outcome", type = "html")
+```
+
+
+
+```{r qca_rb, echo=T, warning=F, eval=T, fig.cap="Calibrating Resource based Conditions"}
+thr1 <- 1
+data_qca$RB.Budget <-  c(rep(0, 26), rep(thr1, 4), rep(0, 6), rep(thr1, 9), rep(0, 10),
+                         rep(0, 2), rep(1, 4), rep(0, 6), rep(thr1, 3))
+
+
+data$delta <- as.vector(Delt(data$RB.Budget.All)) #for reference
+
+p1 <-  ggplot(data, aes(y=RB.Budget.All/1000000, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$RB.Budget)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("Budget in Million 2009 USD") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+data_qca$RB.Inequality <-  recode(data$RB.Inequality, recodes = "0:0.8126000=0; 0.8126313:0.9=1")
+
+p2 <- ggplot(data, aes(y=RB.Inequality, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$RB.Inequality)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "bottom") + ylab("Gini of GDP") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+data_qca$RB.Complexity <- c(rep(1, 55), rep(0, 15))
+
+multiplot(p1, p2)
+data$delta <-NULL # no longer needed
+#$
+```
+
+
+
+```{r print_conditions_rb, echo=T, warning=F, results="asis"}
+print(xtable(data_qca[c(1, 10:12)], digits = 0, caption = "Resource Based Crisp Set"),  include.rownames=F, floating = F, booktabs = T, size = "scriptsize",  tabular.environment = "longtable", caption.placement = "top", label="tab:print_outcome_nb", type = "html")
+```
+
+
+```{r qca_nb_media, echo=T, warning=F, eval=T, fig.cap="Calibrating Media Visibility"}
+thr1 <- 1
+
+data_qca$NB.visibility.all <-  c(rep(0, 29), rep(thr1, 5), rep(1, 4), rep(thr1, 7), rep(1, 6), rep(thr1, 3), 1,
+                          rep(0, 15))
+
+
+p1 <-  ggplot(data, aes(y=NB.visibility.1, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$NB.visibility.all)), color = "#353334") +
+  facet_grid(IO ~ ., scales = "free_y")  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("Total Articles in Media") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+data_qca$NB.visibility.hl <-  c(rep(0, 29), rep(1, 3), rep(0, 10), rep(1, 5), rep(0, 5), rep(1, 3),
+                          rep(0, 15))
+
+p2 <- ggplot(data, aes(y=NB.visibility.2, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$NB.visibility.hl)),color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "bottom") + ylab("Share of Hits in Headlines") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+multiplot(p1, p2)
+```
+
+
+
+
+```{r echo = F, warning = F}
+data_qca$NB.gov.depth <- c(rep(0, 13), rep(0, 21), rep(1, 21),
+                           rep(0, 15))
+#$
+```
+
+
+```{r qca_nb_rest, echo=T, warning=F, eval=T, fig.cap="Calibrating Democratic Membership and the Presence of the Open Governance Norm"}
+data_qca$NB.dem.mem <-  c(rep(0, 36), rep(1, 19),
+                          rep(0, 7), rep(1, 8))
+
+
+p1 <-    ggplot(data, aes(y=NB.dem.mem, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$NB.dem.mem)), color = "#353334") +
+  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "none") + ylab("Share of Democracies") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+thr1 <- 1
+data_qca$NB.og.norm <-  c(rep(0, 33), rep(thr1, 6), rep(1, 16),
+                          rep(1, 15))
+
+p2 <-   ggplot(data, aes(y=NB.og.norm, x = Year)) +
+  geom_point(aes(size = as.factor(data_qca$NB.og.norm)),color = "#353334") +
+#  facet_grid(IO ~ .)  +
+  scale_size_manual("Set Membership", values = c(2, 6)) +
+  theme_bw() + theme(legend.position = "bottom") + ylab("Presence of open Governance Norm") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+
+multiplot(p1, p2)
+```
+
+
+
+```{r print_conditions_nb, echo=T, warning=F, results="asis"}
+print(xtable(data_qca[c(1, 13:16)], digits = 0, caption = "Norm Based Crisp Set"),  include.rownames=F, floating = F, booktabs = T, size = "scriptsize",  tabular.environment = "longtable", caption.placement = "top", label="tab:print_outcome_nb", type = "html")
+```
+
+
+```{r summary_opening_qca, echo=T, warning=F, message=F, fig.cap="Changes in IAEA and OPCW Openness Sets"}
+data_qca$Year <- data$Year
+data_qca$IO <- data$IO
+plot_dat <- data_qca %>% select(IO, Year, TALK.Part, TALK.Trans, DEC.Part, DEC.Trans,  ACT.Part.1, ACT.Part.2, ACT.Part.4, ACT.Trans)
+plot_dat <- melt(plot_dat, id.vars = c("Year", "IO"))
+
+ggplot(plot_dat) + geom_tile(aes(x = Year, y = variable, fill = factor(value))) + scale_fill_grey("membership scores", start = 0.95, end = 0.1) + facet_grid(IO ~ .) + theme_bw() + theme(legend.position = "bottom", legend.key.size = unit(1, "cm")) + ylab("") + xlab("") + theme(text=element_text(family="Charis SIL", size=12))
+```
+
+
+```{r sourcing.in}
+rm(data_qca)
+data_qca <- read.csv2("../data/data_qca.csv") # from Appendix
+data_qca$X <- NULL
+```
+
+
+```{r talk.tt, echo=T, results="asis"}
+tt <- truthTable(data_qca[c(20, 10:11, 13:17)], outcome =
+            c("TALK"), incl.cut1=1, sort.by="incl",
+            show.cases = TRUE)
+truth <- tt$tt
+## clean up messy output of truthTable function
+truth$incl <- as.numeric(truth$incl)
+truth$incl[which(truth$incl != 0 & truth$incl != 1)] <- as.character(round(truth$incl[which(truth$incl != 0 & truth$incl != 1)], digits = 3))
+truth$PRI <- as.numeric(truth$PRI)
+truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)] <- as.character(round(truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)], digits = 3))
+truth$cases <- gsub(",", ", ", truth$cases)
+
+xtab <- xtable(truth, digits = 0, caption = "Truth Table: Openness Talk", label = "tab:tt.talk")
+align(xtab) <- "p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.6cm}p{0.6cm}p{4.5cm}"
+print(xtab, type="html", booktabs=T, size = "scriptsize", rotate.colnames = T, include.rownames = FALSE,   table.placement = "th", add.to.row = list(list(16),
+             "\\bottomrule  \\multicolumn{12}{c}{\\textbf{Note:} Inclusion cut: 1.} \\\\
+             "), hline.after = c(-1, 0))
+
+```
+
+
+```{r talk.nc, echo=T, warning=F}
+nc <- superSubset(data_qca[c(20, 10:11, 13:17)], outcome =
+            "TALK", relation="necessity", incl.cut=0.8, cov.cut=0.8)
+nc.tab <- nc$incl.cov[c(1),]
+
+nc_neg <- superSubset(data_qca[c(20, 10:11, 13:17)], outcome =
+            "TALK", relation="necessity", incl.cut=0.8, cov.cut=0.8,
+            neg.out = T)
+nc.tab[2, ] <- nc_neg$incl.cov[1, ]
+
+```
+
+```{r results = "asis"}
+xtab <- xtable(nc.tab[1, ], digits = 3)
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = T, floating = F, latex.environment = "center")
+```
+
+
+```{r talk.suff, echo = F}
+sc.tab <- data.frame(Solution = c("conservative", "intermediate", "parsimonious"), Formula = NA, incl. = NA, PRI = NA, cov = NA )
+
+tt <- truthTable(data_qca[c(20, 10:11, 13:16)],
+            outcome = c("TALK"), incl.cut1=1, sort.by="incl",
+            show.cases = TRUE)
+
+# conservative solution
+sc.cons <- eqmcc(tt, show.cases = TRUE, details = TRUE)
+sol <- sc.cons$IC$incl.cov
+sc.tab[1, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2], " OR ", row.names(sol)[3], " OR ", row.names(sol)[4])
+sc.tab[1, 2] <- gsub("[*]", " * ", sc.tab[1, 2])
+sc.tab[1, 3:5] <- sc.cons$IC$sol.incl.cov
+
+# intermediary solution with directed expectations
+sc.intermed <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, dir.exp = c(rep(1, 6)))
+sol <- sc.intermed$i.sol$C1P1$IC$incl.cov
+sc.tab[2, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2], " OR ", row.names(sol)[3])
+sc.tab[2, 2] <- gsub("[*]", " * ", sc.tab[2, 2])
+sc.tab[2, 3:5] <- sc.intermed$i.sol$C1P1$IC$sol.incl.cov
+
+# parsimonious solution
+sc.pars <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sol <- sc.pars$IC$incl.cov
+sc.tab[3, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2])
+sc.tab[3, 2] <- gsub("[*]", " * ", sc.tab[3, 2])
+sc.tab[3, 3:5] <- sc.pars$IC$sol.incl.cov
+#
+```
+
+
+
+```{r talk.sc, results = "asis"}
+xtab <- xtable(sc.tab, digits = 3)
+align(xtab) <- "lp{2cm}p{7cm}rrr"
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = F, floating = F)
+```
+
+
+
+```{r talk.pis, results = "asis"}
+xtab <- sc.intermed$i.sol$C1P1$IC$incl.cov
+row.names(xtab) <- gsub("[*]", " * ", row.names(xtab))
+xtab$cases <-  gsub(",", ", ", xtab$cases)
+xtab <- xtable(xtab, digits = 3, caption = "Openness Talk, Sufficient Prime Implicants", label = "tab:talk:pis")
+align(xtab) <- "p{3cm}rrrrp{5cm}"
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = T, floating = T)
+```
+
+
+
+```{r dec.tt, echo=T, results="asis", eval = T}
+tt <- truthTable(data_qca[c(23, 10:11, 13:17)], outcome = c("DECISION"),
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+truth <- tt$tt
+## clean up messy output of truthTable function
+truth$incl <- as.numeric(truth$incl)
+truth$incl[which(truth$incl != 0 & truth$incl != 1)] <- as.character(round(truth$incl[which(truth$incl != 0 & truth$incl != 1)], digits = 3))
+truth$PRI <- as.numeric(truth$PRI)
+truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)] <- as.character(round(truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)], digits = 3))
+truth$cases <- gsub(",", ", ", truth$cases)
+
+xtab <- xtable(truth, digits = 0, caption = "Truth Table: Openness Decisions", label = "tab:tt.dec.part")
+align(xtab) <- "p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.6cm}p{0.6cm}p{4.5cm}"
+print(xtab, type="html", booktabs=T, size = "scriptsize", rotate.colnames = T, include.rownames = FALSE,   table.placement = "th", add.to.row = list(list(16),
+             "\\bottomrule  \\multicolumn{12}{c}{\\textbf{Note:} Inclusion cut: 1.} \\\\
+             "), hline.after = c(-1, 0))
+#$
+```
+
+
+```{r dec.nc, echo=T, warning=F}
+nc <- superSubset(data_qca[c(23, 10:11, 13:17)], outcome = "DECISION",
+            relation="nec", incl.cut=0.8, cov.cut=0.5)
+nc.tab <- nc$incl.cov[c(1),]
+
+#nc_neg <- superSubset(data_qca[c(20, 10:17)], outcome =
+#            "TALK", relation="necessity", incl.cut=0.8, cov.cut=0.8,
+#            neg.out = T)
+#nc.tab[2, ] <- nc_neg$incl.cov[1, ]
+
+```
+
+
+
+```{r results = "asis"}
+xtab <- xtable(nc.tab[1, ], digits = 3)
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = T, floating = F, latex.environment = "center")
+```
+
+```{r dec.suff, echo = F}
+sc.tab <- data.frame(Solution = c("conservative", "intermediate", "parsimonious"), Formula = NA, incl. = NA, PRI = NA, cov = NA )
+
+tt <- truthTable(data_qca[c(23, 10:11, 13:16)], outcome = c("DECISION"),
+            incl.cut1=1, sort.by="incl", show.cases = TRUE)
+
+# conservative solution
+sc.cons <- eqmcc(tt, show.cases = TRUE, details = TRUE)
+sol <- sc.cons$IC$incl.cov
+sc.tab[1, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2], " OR ", row.names(sol)[3])
+sc.tab[1, 2] <- gsub("[*]", " * ", sc.tab[1, 2])
+sc.tab[1, 3:5] <- sc.cons$IC$sol.incl.cov
+
+# intermediary solution with directed expectations
+sc.intermed <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, dir.exp = c(rep(1, 6)))
+sol <- sc.intermed$i.sol$C1P1$IC$incl.cov
+sc.tab[2, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2])
+sc.tab[2, 2] <- gsub("[*]", " * ", sc.tab[2, 2])
+sc.tab[2, 3:5] <- sc.intermed$i.sol$C1P1$IC$sol.incl.cov
+
+# parsimonious solution
+sc.pars <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sol <- sc.pars$IC$incl.cov
+sc.tab[3, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2])
+sc.tab[3, 2] <- gsub("[*]", " * ", sc.tab[3, 2])
+sc.tab[3, 3:5] <- sc.pars$IC$sol.incl.cov
+
+```
+
+
+
+```{r dec.pis, results = "asis"}
+xtab <- sc.intermed$i.sol$C1P1$IC$incl.cov
+row.names(xtab) <- gsub("[*]", " * ", row.names(xtab))
+xtab$cases <-  gsub(",", ", ", xtab$cases)
+xtab <- xtable(xtab, digits = 3, caption = "Openness Decisions, Sufficient Prime Implicants", label = "tab:dec:pis")
+align(xtab) <- "p{3cm}rrrrp{5cm}"
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = T, floating = T)
+```
+
+
+```{r act.part.tt, echo=T, results="asis", eval = T}
+tt <- truthTable(data_qca[c(27, 10:11, 13:17)],
+            outcome = c("ACTPART"), incl.cut1=1, sort.by="incl",
+            show.cases = TRUE)
+truth <- tt$tt
+## clean up messy output of truthTable function
+truth$incl <- as.numeric(truth$incl)
+truth$incl[which(truth$incl != 0 & truth$incl != 1)] <- as.character(round(truth$incl[which(truth$incl != 0 & truth$incl != 1)], digits = 3))
+truth$PRI <- as.numeric(truth$PRI)
+truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)] <- as.character(round(truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)], digits = 3))
+truth$cases <- gsub(",", ", ", truth$cases)
+
+xtab <- xtable(truth, digits = 0, caption = "Truth Table: Participation Action", label = "tab:tt.act.part1")
+align(xtab) <- "p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.6cm}p{0.6cm}p{4.5cm}"
+print(xtab, type="html", booktabs=T, size = "scriptsize", rotate.colnames = T, include.rownames = FALSE,   table.placement = "th", add.to.row = list(list(16),
+             "\\bottomrule  \\multicolumn{12}{c}{\\textbf{Note:} Inclusion cut: 1.} \\\\
+             "), hline.after = c(-1, 0))
+#$
+```
+
+
+```{r act.part.suff, echo = F}
+sc.tab <- data.frame(Solution = c("conservative", "intermediate", "parsimonious"), Formula = NA, incl. = NA, PRI = NA, cov = NA )
+
+
+# conservative solution
+sc.cons <- eqmcc(tt, show.cases = TRUE, details = TRUE)
+sol <- sc.cons$IC$overall$incl.cov
+sc.tab[1, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2], " OR ", row.names(sol)[3], " OR ", row.names(sol)[4], " OR ", row.names(sol)[5], " OR ", row.names(sol)[6], " OR ", row.names(sol)[7], " OR ", row.names(sol)[8], " OR ", row.names(sol)[9])
+sc.tab[1, 2] <- gsub("[*]", " * ", sc.tab[1, 2])
+sc.tab[1, 3:5] <- sc.cons$IC$overall$sol.incl.cov
+
+# intermediary solution with directed expectations
+sc.intermed <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE, dir.exp = c(rep(1, 7)))
+sol <- sc.intermed$i.sol$C1P1$IC$incl.cov
+sc.tab[2, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2], " OR " , row.names(sol)[3])
+sc.tab[2, 2] <- gsub("[*]", " * ", sc.tab[2, 2])
+sc.tab[2, 3:5] <- sc.intermed$i.sol$C1P1$IC$sol.incl.cov
+
+# parsimonious solution
+sc.pars <- eqmcc(tt, include="?", show.cases = TRUE, details = TRUE)
+sol <- sc.pars$IC$overall$incl.cov
+sc.tab[3, 2] <- paste0(row.names(sol)[1], " OR " , row.names(sol)[2], " OR ", row.names(sol)[3], " OR ", row.names(sol)[4])
+sc.tab[3, 2] <- gsub("[*]", " * ", sc.tab[3, 2])
+sc.tab[3, 3:5] <- sc.pars$IC$overall$sol.incl.cov
+
+```
+
+
+```{r act.part.sc, results = "asis"}
+xtab <- xtable(sc.tab, digits = 3)
+align(xtab) <- "lp{2cm}p{7cm}rrr"
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = F, floating = F)
+```
+
+```{r act.part.pis, results = "asis"}
+xtab <- sc.intermed$i.sol$C1P1$IC$incl.cov
+row.names(xtab) <- gsub("[*]", " * ", row.names(xtab))
+xtab$cases <-  gsub(",", ", ", xtab$cases)
+xtab <- xtable(xtab, digits = 3, caption = "Participation Action, Sufficient Prime Implicants", label = "tab:act.part:pis")
+align(xtab) <- "p{3cm}rrrrp{5cm}"
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = T, floating = T)
+```
+
+
+```{r act.trans.tt, echo=T, results="asis", eval = T}
+tt <- truthTable(data_qca[c(28, 10:11, 13:17)],
+            outcome = c("ACTTRANS"), incl.cut1=0.8, sort.by="incl",
+            show.cases = TRUE)
+truth <- tt$tt
+## clean up messy output of truthTable function
+truth$incl <- as.numeric(truth$incl)
+truth$incl[which(truth$incl != 0 & truth$incl != 1)] <- as.character(round(truth$incl[which(truth$incl != 0 & truth$incl != 1)], digits = 3))
+truth$PRI <- as.numeric(truth$PRI)
+truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)] <- as.character(round(truth$PRI[which(truth$PRI != 0 & truth$PRI != 1)], digits = 3))
+truth$cases <- gsub(",", ", ", truth$cases)
+
+xtab <- xtable(truth, digits = 0, caption = "Truth Table: Transparency Action", label = "tab:tt.act.trans")
+align(xtab) <- "p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.3cm}p{0.6cm}p{0.6cm}p{4.5cm}"
+print(xtab, type="html", booktabs=T, size = "scriptsize", rotate.colnames = T, include.rownames = FALSE,   table.placement = "th", add.to.row = list(list(16),
+             "\\bottomrule  \\multicolumn{12}{c}{\\textbf{Note:} Inclusion cut: 0.8.} \\\\
+             "), hline.after = c(-1, 0))
+#$
+```
+
+
+
+```{r act.trans.nc, echo=T, warning=F, eval = T}
+nc <- superSubset(data_qca[c(28, 10:11, 13:17)], outcome = "ACTTRANS",
+            relation="nec", incl.cut=0.8, cov.cut=0.37)
+nc.tab <- nc$incl.cov[c(1:2),]
+#$
+```
+
+
+```{r results = "asis"}
+xtab <- xtable(nc.tab, digits = 3)
+print(xtab, type="html", booktabs=T, size = "footnotesize", rotate.colnames = F, include.rownames = T, floating = F, latex.environment = "center")
+```
+
+
+```{r summary_explanats, echo=T, cache=F, dev="pdf", warning=F, message=F}
+library(DiagrammeR)
+nodes <-  create_nodes(nodes = c("H1: Resource Constraints", "H2: Membership Inequality", "H3: Issue Complexity", "H4: Public Visibility", "H5: Democratic Membership", "H6: Authority", "H7: Open Governance Norm", "Openness Talk", "Openness Decisions", "Participation Action", "Transparency Action"), shape = c(rep("rectangle", 7), rep("circle", 4)), fontname = "Charis SIL", fixedsize = F, fontsize = 12, fillcolor = c(rep("White", 7), rep("WhiteSmoke", 4)), style = "filled", x = c(1:7, 1:4), y = c(rep(2, 7), rep(0,4)))
+
+edges <- read.csv2(text = "
+edge_from;edge_to;color;dir;penwidth;arrowsize
+H1: Resource Constraints;Openness Talk;grey;forward;1;1
+H1: Resource Constraints;Participation Action;grey;forward;1;1
+H2: Membership Inequality;Openness Talk;grey;forward;1;1
+H2: Membership Inequality;Openness Decisions;grey;forward;1;1
+H2: Membership Inequality;Participation Action;grey;forward;1;1
+H4: Public Visibility;Openness Talk;grey;forward;1;1
+H4: Public Visibility;Openness Decisions;grey;forward;1;1
+H4: Public Visibility;Participation Action;grey;forward;1;1
+H5: Democratic Membership;Openness Talk;grey;forward;1;1
+H5: Democratic Membership;Openness Decisions;grey;forward;1;1
+H5: Democratic Membership;Participation Action;grey;forward;1;1
+H6: Authority;Openness Talk;grey;forward;1;1
+H6: Authority;Participation Action;grey;forward;1;1
+H5: Democratic Membership;Transparency Action;black;both;2;1
+H7: Open Governance Norm;Transparency Action;black;both;2;1
+H7: Open Governance Norm;Openness Talk;black;both;2;1
+H7: Open Governance Norm;Openness Decisions;black;both;2;1")
+
+set.seed(12)
+
+graph <- create_graph(nodes_df = nodes, edges_df = edges, graph_attrs = c("layout = circo", "overlap = false", "ranksep = 1", "outputorder = edgesfirst"))
+graph.svg <- render_graph(graph, width = 600, height = 600, output = "SVG")
+write(graph.svg, file = "ch5-graph.svg")
+
+system("convert ch5-graph.svg -depth 600 -units pixelsperinch ch5-graph.pdf")
+```
+

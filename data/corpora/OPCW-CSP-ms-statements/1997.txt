@@ -1,0 +1,44 @@
+OPCW Conference of the States Parties 
+Second Session C-II/NAT.7 1 -5 December 1997 5 December 1997 
+
+Original: ENGLISH 
+AUSTRALIA 
+IMPLEMENTING CWC OBLIGATIONS 
+RELATING TO INTERNATIONAL TRADE IN CHEMICALS 
+
+Overview 
+To meet the requirements in the Chemical Weapons Convention (CWC) concerning international trade in Scheduled chemicals, Australia has implemented appropriate changes to existing regulations under the Customs Act (1901) to cover exports of all, and imports of some, CWC Scheduled chemicals. 
+Australias principal implementing legislation for the CWC -the Chemical Weapons (Prohibition) Act 1994 -does not contain provisions to implement the CWC obligations relating to monitoring/regulating international trade in chemicals. The decision to exclude such provisions from that Act was taken as the Australian Government already possessed the necessary authority to control imports and exports of goods under the Customs Act 1901. 
+Under previous national export licensing regulations, Australia had required individual licences (that is, a licence for every shipment) for sales to all destinations of 59 so called dual-use chemicals. Australia now requires individual licences for exports to all destinations of chemicals on the CWC Schedules -as well as the additional chemicals that were already listed under the Customs (Prohibited Exports) Regulation 13D. A single authority is responsible for issuing export licenses -this is the Strategic Trade Policy and Operations Section of the Department of Defence. (This Section is also responsible for issuing licences for exports from Australia of other dual-use goods). This was judged to be the most practical arrangement from the point of view of industry, as individual exporters cannot be expected to be aware of all issues driving export control policies and practice, nor can they be expected to self regulate in a commercial competitive environment. 
+The amended export regulation, and measures to monitor imports of Schedule 1 chemicals, have been developed to ensure that Australia satisfies relevant obligations under the CWC, including the requirement set out in Article XI paragraph 2(e) of the CWC to review existing national regulations in the field of trade in chemicals to render them consistent with the object and purpose of that Convention. 
+Further details on the legislative changes are set out below. 
+CS-1997-504 
+C-II/NAT.7 page 2 
+
+Scope of export licensing changes 
+New requirements, included in the amended Customs (Prohibited Exports) Regulations and licensing procedures, implement the following specific CWC requirements set out in the Conventions Verification Annex: 
+ 	
+The obligation in paragraph 32 of Part VII of the Annex to require end-user certification for exports of Schedule 2 chemicals to non-States Parties, and the similar obligation set out in paragraph 26 of Part VIII of the Annex in relation to exports of Schedule 3 chemicals. A future amendment to the regulation would implement the obligation in paragraph 31 of Part VII of the Annex to restrict exports of Schedule 2 chemicals only to State Parties. (A similar amendment would be made if, as allowed for in paragraph 27 of Part VIII of the Annex, a decision were to be taken to restrict exports of Schedule 3 chemicals to States Parties). 
+
+ 	
+The obligation in paragraphs 3 to 6 of Part VI of the Annex in relation to any export of Schedule 1 chemicals to the effect that exports only be allowed to other States Parties, and that 30 days advance notification be provided to the Organisation for the Prohibition of Chemical Weapons (OPCW), and any re­export of Schedule 1 chemicals is prohibited. 
+
+
+In keeping with Australias existing universal and non-discriminatory practice under Customs (Prohibited Export) Regulation 13D, licences for CWC chemicals and the additional chemicals currently controlled nationally by Australia are required for exports to all destinations, including all CWC States Parties. 
+
+Scope of import licensing procedures 
+The requirement in paragraph 5 of Part VI of the Verification Annex to provide 30 days advance notification to the OPCW of plans for the import of any Schedule 1 chemical has been implemented as part of a new Customs (Prohibited Imports) Regulation. This Regulation creates a new requirement for licences for such imports. These procedures are administered by Australias national authority for the CWC -the CWC Office (CWCO) ­which is a separate unit within the Foreign Affairs and Trade portfolio. A future amendment to this regulation would be possible to implement the obligation under paragraph 31 of Part VII of the Annex to allow Schedule 2 chemicals to be imported only from other States Parties, when this requirement comes into effect three years after entry into force of the CWC. 
+Australia will not initially require licences for imports of Schedule 2 chemicals. The CWC requirement to provide declarations to the OPCW of aggregate annual figures for imports of Schedule 2 and 3 chemicals will be implemented by compiling information from trade statistics collected by the Australian Customs Service. However, as complete trade statistics were not available for 1996, the information in the initial declaration was based on the CWCOs industry surveys. 
+Identifying trade in Scheduled chemicals 
+C-II/NAT.7 page 3 
+It is important to ensure that all shipments of Scheduled chemicals to and from Australia can be readily identified. This is necessary for the collection of statistical data on imports of Schedule 2 and 3 chemicals and also helps to ensure that the new export and import licensing arrangements work as effectively as possible, and greatly assist collection of import data on Schedule 2 and 3 chemicals. It also enhances the effectiveness of existing licensing procedures on CW precursor chemicals. 
+Australia uses a (8-10 digit) system of numerical codes to classify traded commodities. This system is based on the (6 digit ) Harmonised Commodity Description Encoding System (HS), administered internationally by the World Customs Organisation (WCO). The current HS codes do not individually identify CWC Scheduled chemicals, but the WCO has of course recommended interim changes in response to a request from the OPCW Preparatory Commission to amend the HS system to create individual identification codes for all CWC Scheduled chemicals. Australia has used the outcome of this process to amend its coding system for imports, and plans to do so for exports later. If necessary, as an interim step, Australia intends to implement a system using the nationally defined codes to identify CWC Scheduled chemicals. 
+
+Trade in other Chemicals 
+The General Obligations of the CWC, as specified in Article I, require each State Party to undertake never under any circumstances to transfer chemical weapons to anyone (Article I, Paragraph 1 (a)) or to assist, encourage or induce, in any way, anyone to engage in any activity prohibited to a State Party (Article I, Paragraph 1 (d)). 
+There are of course other chemicals which have been sought for CW proliferation purposes. It is not possible to identify and describe, for regulatory purposes, all other (non-listed) chemicals that might be used in a CW program. Also, in cases where dual-use chemicals have widespread commercial application, it would be impractical to include them in regulations. (If included in regulations, all exports of these items would require a licence, which would create an unnecessary administrative burden on the licensing authority as well as for industry). 
+To address this obligation under the CWC, Australia had developed and enacted the Weapons of Mass Destruction (Prevention of Proliferation) Act 1994. This Act provides the Government with the authority to stop such chemicals from being exported to a destination considered to pose an unacceptable CW proliferation risk, but avoids imposing an unnecessary administrative burden on the licensing authority or industry. 
+---o--­
+
+
+
