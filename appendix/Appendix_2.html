@@ -66,9 +66,9 @@ img {
 </div>
 
 
-<p>This appendix illustrates the grouping of the participation events data. Methodologically, I use a simple keyword search on all codings of a year. The original coding data can be retrieved by opening the <code>IAEA.rqda</code> and <code>OPCW.rqda</code> files with the <code>RQDA</code> software package.</p>
-<p>For the keyword classification, I extracted all ACT.Part codings from the files and copied them to text files for each year. The search is thus only performed on those parts of texts of the Annual Reports that I coded qualitatively as relevant statements about participation events.</p>
-<p>The following packages were used for the analysis:</p>
+<p>This appendix illustrates the grouping of the participation events data. Methodologically, I use a simple keyword search on all codings of a year. The original coding data can be retrieved by opening the <code>IAEA.rqda</code> and <code>OPCW.rqda</code> files with the <code>RQDA</code> software package.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></p>
+<p>For the keyword classification, I extracted all <code>ACT.Part</code> codings from the files and copied them to text files for each year. The search is thus only performed on those parts of texts of the Annual Reports that I coded qualitatively as relevant statements about participation events.</p>
+<p>The following packages were used for the analysis<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>:</p>
 <pre class="r"><code>library(tm)
 library(slam)
 library(dplyr)
@@ -80,30 +80,30 @@ library(xtable)</code></pre>
 <p>In the first step I create a corpus from the annual codings and pre-process the texts to remove stopwords, punctuation and upper case letters. Next, I create a document term matrix, which includes the freuqnecy of each term in each document. The matrix is then used to extract relevant search terms.</p>
 <pre class="r"><code>corpus &lt;- Corpus(DirSource(&quot;../data/corpora/iaea-part-events/&quot;, encoding=&quot;UTF-8&quot;),
             readerControl=list(language=&quot;en&quot;))
-corpusVars &lt;- data.frame(var1=factor(rep(&quot;&quot;, length(corpus))), 
+corpusVars &lt;- data.frame(var1=factor(rep(&quot;&quot;, length(corpus))),
             row.names=names(corpus))
 dtmCorpus &lt;- corpus
 dtmCorpus &lt;- tm_map(dtmCorpus, content_transformer(tolower))
-dtmCorpus &lt;- tm_map(dtmCorpus, content_transformer(function(x) 
+dtmCorpus &lt;- tm_map(dtmCorpus, content_transformer(function(x)
             gsub(&quot;(['’\n]|[[:punct:]]|[[:space:]]|[[:cntrl:]])+&quot;,
                      &quot; &quot;, x)))
 dtmCorpus &lt;- tm_map(dtmCorpus, removeNumbers)
-dtm &lt;- DocumentTermMatrix(dtmCorpus, control=list(tolower=FALSE, 
+dtm &lt;- DocumentTermMatrix(dtmCorpus, control=list(tolower=FALSE,
                     wordLengths=c(2, Inf)))
 rm(dtmCorpus)
-dictionary &lt;- data.frame(row.names=colnames(dtm), 
-                &quot;Occurrences&quot;=col_sums(dtm),   
-                &quot;Stopword&quot;=ifelse(colnames(dtm) %in% stopwords(&quot;en&quot;), 
+dictionary &lt;- data.frame(row.names=colnames(dtm),
+                &quot;Occurrences&quot;=col_sums(dtm),
+                &quot;Stopword&quot;=ifelse(colnames(dtm) %in% stopwords(&quot;en&quot;),
                 &quot;Stopword&quot;, &quot;&quot;),   stringsAsFactors=FALSE)
 dtm &lt;- dtm[, !colnames(dtm) %in% stopwords(&quot;en&quot;)]
 attr(dtm, &quot;dictionary&quot;) &lt;- dictionary
 rm(dictionary)
-meta(corpus, type=&quot;corpus&quot;, tag=&quot;language&quot;) &lt;- 
+meta(corpus, type=&quot;corpus&quot;, tag=&quot;language&quot;) &lt;-
     attr(dtm, &quot;language&quot;) &lt;- &quot;en&quot;
-meta(corpus, type=&quot;corpus&quot;, tag=&quot;processing&quot;) &lt;- 
-    attr(dtm, &quot;processing&quot;) &lt;- c(lowercase=TRUE, punctuation=TRUE, 
-                    digits=TRUE, stopwords=TRUE, stemming=FALSE, 
-                    customStemming=FALSE, twitter=FALSE, 
+meta(corpus, type=&quot;corpus&quot;, tag=&quot;processing&quot;) &lt;-
+    attr(dtm, &quot;processing&quot;) &lt;- c(lowercase=TRUE, punctuation=TRUE,
+                    digits=TRUE, stopwords=TRUE, stemming=FALSE,
+                    customStemming=FALSE, twitter=FALSE,
                     removeHashtags=NA, removeNames=NA)
 corpus</code></pre>
 <pre><code>## &lt;&lt;VCorpus&gt;&gt;
@@ -115,76 +115,2374 @@ corpus</code></pre>
 ## Sparsity           : 89%
 ## Maximal term length: 26
 ## Weighting          : term frequency (tf)</code></pre>
-<p>In the second step, I first collect all search terms that still have different orthography. Second, I group them together according to the overarching topics of <code>Science</code>, <code>Training</code>, and <code>Advise</code>.</p>
-<pre class="r"><code>terms &lt;- as.data.frame(as.matrix(dtm)) 
+<p>In the second step, I first collect all search terms that still may have different orthography. Second, I group them together according to the overarching topics of <code>Science</code>, <code>Training</code>, and <code>Advise</code>.</p>
+<pre class="r"><code>terms &lt;- as.data.frame(as.matrix(dtm))
 terms$Year &lt;- 1957:2011
 
 ## combine relevant terms
-terms$WORKSHOP &lt;- terms$workshop + terms$workshops + 
+terms$WORKSHOP &lt;- terms$workshop + terms$workshops +
     terms$workshopsí
-terms$SEMINAR &lt;- terms$seminar + terms$seminarí + 
+terms$SEMINAR &lt;- terms$seminar + terms$seminarí +
     terms$seminars +terms$seminarsã
 terms$TRAINING &lt;- terms$training + terms$trainingí
-terms$MEETING &lt;- terms$meeting + terms$meetingís + 
+terms$MEETING &lt;- terms$meeting + terms$meetingís +
     terms$meetings
-terms$COURSE &lt;- terms$course + terms$courses 
-terms$PANEL &lt;- terms$panel + terms$panelonthe + 
+terms$COURSE &lt;- terms$course + terms$courses
+terms$PANEL &lt;- terms$panel + terms$panelonthe +
     terms$panels
-terms$CONSULTANT &lt;- terms$consultant + 
+terms$CONSULTANT &lt;- terms$consultant +
     terms$consultants
 terms$SYMPOSIA &lt;- terms$symposia + terms$symposium
-terms$NETWORK &lt;- terms$network + terms$networki + 
+terms$NETWORK &lt;- terms$network + terms$networki +
     terms$networkís + terms$networks
 terms$ADVISOR &lt;- terms$advisor + terms$advisory
 
 ## create term categories
-terms$GROUP_SCIENCE &lt;- terms$SEMINAR + terms$PANEL + 
+terms$GROUP_SCIENCE &lt;- terms$SEMINAR + terms$PANEL +
     terms$SYMPOSIA
-terms$GROUP_TRAINING &lt;- terms$TRAINING + terms$COURSE + 
+terms$GROUP_TRAINING &lt;- terms$TRAINING + terms$COURSE +
     terms$WORKSHOP
-terms$GROUP_ADVICE &lt;- terms$MEETING + terms$CONSULTANT + 
+terms$GROUP_ADVICE &lt;- terms$MEETING + terms$CONSULTANT +
     terms$NETWORK + terms$ADVISOR
 
 
 write.csv(terms, file = &quot;coding_terms.csv&quot;)
 
-terms2 &lt;- terms %&gt;% select(Year, WORKSHOP, SEMINAR, TRAINING, 
-                        MEETING, COURSE, PANEL, CONSULTANT, SYMPOSIA, 
-                        NETWORK, GROUP_SCIENCE, GROUP_TRAINING, 
+terms2 &lt;- terms %&gt;% select(Year, WORKSHOP, SEMINAR, TRAINING,
+                        MEETING, COURSE, PANEL, CONSULTANT, SYMPOSIA,
+                        NETWORK, GROUP_SCIENCE, GROUP_TRAINING,
                         GROUP_ADVICE)
 write.csv(terms2, file = &quot;iaea-participation-events.csv&quot;)</code></pre>
-% latex table generated in R 3.2.2 by xtable 1.7-4 package % Sun Sep 20 22:55:47 2015
-
+<!-- html table generated in R 3.2.2 by xtable 1.7-4 package -->
+<!-- Mon Sep 21 17:21:39 2015 -->
+<table border="1">
+<tr>
+<th>
+Year
+</th>
+<th>
+WORKSHOP
+</th>
+<th>
+SEMINAR
+</th>
+<th>
+TRAINING
+</th>
+<th>
+MEETING
+</th>
+<th>
+COURSE
+</th>
+<th>
+PANEL
+</th>
+<th>
+CONSULTANT
+</th>
+<th>
+SYMPOSIA
+</th>
+<th>
+NETWORK
+</th>
+<th>
+GROUP_SCIENCE
+</th>
+<th>
+GROUP_TRAINING
+</th>
+<th>
+GROUP_ADVICE
+</th>
+</tr>
+<tr>
+<td align="right">
+1957
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+12
+</td>
+</tr>
+<tr>
+<td align="right">
+1958
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+32
+</td>
+<td align="right">
+33
+</td>
+<td align="right">
+25
+</td>
+</tr>
+<tr>
+<td align="right">
+1959
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+39
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+56
+</td>
+<td align="right">
+44
+</td>
+<td align="right">
+14
+</td>
+</tr>
+<tr>
+<td align="right">
+1960
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+46
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+14
+</td>
+</tr>
+<tr>
+<td align="right">
+1961
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+19
+</td>
+</tr>
+<tr>
+<td align="right">
+1962
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+26
+</td>
+</tr>
+<tr>
+<td align="right">
+1963
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+34
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+22
+</td>
+</tr>
+<tr>
+<td align="right">
+1964
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+49
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+34
+</td>
+</tr>
+<tr>
+<td align="right">
+1965
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+41
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+25
+</td>
+</tr>
+<tr>
+<td align="right">
+1966
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+5
+</td>
+</tr>
+<tr>
+<td align="right">
+1967
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+39
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+20
+</td>
+</tr>
+<tr>
+<td align="right">
+1968
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+42
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+13
+</td>
+</tr>
+<tr>
+<td align="right">
+1969
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+25
+</td>
+</tr>
+<tr>
+<td align="right">
+1970
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+42
+</td>
+<td align="right">
+28
+</td>
+<td align="right">
+27
+</td>
+</tr>
+<tr>
+<td align="right">
+1971
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+33
+</td>
+<td align="right">
+30
+</td>
+<td align="right">
+36
+</td>
+</tr>
+<tr>
+<td align="right">
+1972
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+43
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+28
+</td>
+</tr>
+<tr>
+<td align="right">
+1973
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+28
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+31
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+30
+</td>
+</tr>
+<tr>
+<td align="right">
+1974
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+31
+</td>
+<td align="right">
+45
+</td>
+</tr>
+<tr>
+<td align="right">
+1975
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+33
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+55
+</td>
+</tr>
+<tr>
+<td align="right">
+1976
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+40
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+70
+</td>
+</tr>
+<tr>
+<td align="right">
+1977
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+53
+</td>
+</tr>
+<tr>
+<td align="right">
+1978
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+39
+</td>
+<td align="right">
+32
+</td>
+</tr>
+<tr>
+<td align="right">
+1979
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+32
+</td>
+<td align="right">
+30
+</td>
+</tr>
+<tr>
+<td align="right">
+1980
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+42
+</td>
+<td align="right">
+14
+</td>
+</tr>
+<tr>
+<td align="right">
+1981
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+33
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+30
+</td>
+<td align="right">
+67
+</td>
+<td align="right">
+44
+</td>
+</tr>
+<tr>
+<td align="right">
+1982
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+45
+</td>
+<td align="right">
+41
+</td>
+<td align="right">
+44
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+103
+</td>
+<td align="right">
+71
+</td>
+</tr>
+<tr>
+<td align="right">
+1983
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+61
+</td>
+<td align="right">
+48
+</td>
+<td align="right">
+41
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+116
+</td>
+<td align="right">
+84
+</td>
+</tr>
+<tr>
+<td align="right">
+1984
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+41
+</td>
+<td align="right">
+58
+</td>
+<td align="right">
+38
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+30
+</td>
+<td align="right">
+81
+</td>
+<td align="right">
+102
+</td>
+</tr>
+<tr>
+<td align="right">
+1985
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+65
+</td>
+<td align="right">
+46
+</td>
+<td align="right">
+47
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+132
+</td>
+<td align="right">
+89
+</td>
+</tr>
+<tr>
+<td align="right">
+1986
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+60
+</td>
+<td align="right">
+69
+</td>
+<td align="right">
+45
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+125
+</td>
+<td align="right">
+121
+</td>
+</tr>
+<tr>
+<td align="right">
+1987
+</td>
+<td align="right">
+38
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+75
+</td>
+<td align="right">
+46
+</td>
+<td align="right">
+53
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+34
+</td>
+<td align="right">
+166
+</td>
+<td align="right">
+82
+</td>
+</tr>
+<tr>
+<td align="right">
+1988
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+86
+</td>
+<td align="right">
+90
+</td>
+<td align="right">
+57
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+169
+</td>
+<td align="right">
+138
+</td>
+</tr>
+<tr>
+<td align="right">
+1989
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+43
+</td>
+<td align="right">
+61
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+74
+</td>
+<td align="right">
+86
+</td>
+</tr>
+<tr>
+<td align="right">
+1990
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+52
+</td>
+<td align="right">
+79
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+30
+</td>
+<td align="right">
+83
+</td>
+<td align="right">
+117
+</td>
+</tr>
+<tr>
+<td align="right">
+1991
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+45
+</td>
+<td align="right">
+78
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+83
+</td>
+<td align="right">
+121
+</td>
+</tr>
+<tr>
+<td align="right">
+1992
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+107
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+62
+</td>
+<td align="right">
+154
+</td>
+</tr>
+<tr>
+<td align="right">
+1993
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+43
+</td>
+<td align="right">
+105
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+80
+</td>
+<td align="right">
+154
+</td>
+</tr>
+<tr>
+<td align="right">
+1994
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+37
+</td>
+<td align="right">
+86
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+57
+</td>
+<td align="right">
+123
+</td>
+</tr>
+<tr>
+<td align="right">
+1995
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+23
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+37
+</td>
+<td align="right">
+45
+</td>
+</tr>
+<tr>
+<td align="right">
+1996
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+32
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+28
+</td>
+<td align="right">
+59
+</td>
+</tr>
+<tr>
+<td align="right">
+1997
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+39
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+71
+</td>
+</tr>
+<tr>
+<td align="right">
+1998
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+63
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+48
+</td>
+<td align="right">
+90
+</td>
+</tr>
+<tr>
+<td align="right">
+1999
+</td>
+<td align="right">
+28
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+43
+</td>
+<td align="right">
+70
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+95
+</td>
+<td align="right">
+105
+</td>
+</tr>
+<tr>
+<td align="right">
+2000
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+38
+</td>
+<td align="right">
+31
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+66
+</td>
+<td align="right">
+52
+</td>
+</tr>
+<tr>
+<td align="right">
+2001
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+71
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+122
+</td>
+<td align="right">
+54
+</td>
+</tr>
+<tr>
+<td align="right">
+2002
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+68
+</td>
+<td align="right">
+42
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+110
+</td>
+<td align="right">
+64
+</td>
+</tr>
+<tr>
+<td align="right">
+2003
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+46
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+28
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+94
+</td>
+<td align="right">
+43
+</td>
+</tr>
+<tr>
+<td align="right">
+2004
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+41
+</td>
+<td align="right">
+39
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+75
+</td>
+<td align="right">
+56
+</td>
+</tr>
+<tr>
+<td align="right">
+2005
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+65
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+106
+</td>
+<td align="right">
+43
+</td>
+</tr>
+<tr>
+<td align="right">
+2006
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+46
+</td>
+<td align="right">
+28
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+89
+</td>
+<td align="right">
+39
+</td>
+</tr>
+<tr>
+<td align="right">
+2007
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+68
+</td>
+<td align="right">
+43
+</td>
+<td align="right">
+30
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+125
+</td>
+<td align="right">
+64
+</td>
+</tr>
+<tr>
+<td align="right">
+2008
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+47
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+32
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+106
+</td>
+<td align="right">
+38
+</td>
+</tr>
+<tr>
+<td align="right">
+2009
+</td>
+<td align="right">
+35
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+60
+</td>
+<td align="right">
+48
+</td>
+<td align="right">
+33
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+128
+</td>
+<td align="right">
+73
+</td>
+</tr>
+<tr>
+<td align="right">
+2010
+</td>
+<td align="right">
+26
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+65
+</td>
+<td align="right">
+37
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+127
+</td>
+<td align="right">
+59
+</td>
+</tr>
+<tr>
+<td align="right">
+2011
+</td>
+<td align="right">
+34
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+70
+</td>
+<td align="right">
+55
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+24
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+140
+</td>
+<td align="right">
+83
+</td>
+</tr>
+</table>
 </div>
 <div id="opcw" class="section level1">
 <h1>OPCW</h1>
 <p>Again, in the first step I create a corpus from the annual codings and pre-process the texts to remove stopwords, punctuation and upper case letters.</p>
-<pre class="r"><code>corpus &lt;- Corpus(DirSource(&quot;../data/corpora/opcw-part-events/&quot;, encoding=&quot;UTF-8&quot;), 
+<pre class="r"><code>corpus &lt;- Corpus(DirSource(&quot;../data/corpora/opcw-part-events/&quot;, encoding=&quot;UTF-8&quot;),
                     readerControl=list(language=&quot;en&quot;))
-corpusVars &lt;- data.frame(var1=factor(rep(&quot;&quot;, length(corpus))), 
+corpusVars &lt;- data.frame(var1=factor(rep(&quot;&quot;, length(corpus))),
                     row.names=names(corpus))
 dtmCorpus &lt;- corpus
 dtmCorpus &lt;- tm_map(dtmCorpus, content_transformer(tolower))
-dtmCorpus &lt;- tm_map(dtmCorpus, 
-    content_transformer(function(x) 
+dtmCorpus &lt;- tm_map(dtmCorpus,
+    content_transformer(function(x)
     gsub(&quot;(['’\n]|[[:punct:]]|[[:space:]]|[[:cntrl:]])+&quot;, &quot; &quot;, x)))
 dtmCorpus &lt;- tm_map(dtmCorpus, removeNumbers)
-dtm &lt;- DocumentTermMatrix(dtmCorpus, 
+dtm &lt;- DocumentTermMatrix(dtmCorpus,
                     control=list(tolower=FALSE, wordLengths=c(2, Inf)))
 rm(dtmCorpus)
-dictionary &lt;- data.frame(row.names=colnames(dtm), 
-                    &quot;Occurrences&quot;=col_sums(dtm),   
-                    &quot;Stopword&quot;=ifelse(colnames(dtm) %in% stopwords(&quot;en&quot;), 
+dictionary &lt;- data.frame(row.names=colnames(dtm),
+                    &quot;Occurrences&quot;=col_sums(dtm),
+                    &quot;Stopword&quot;=ifelse(colnames(dtm) %in% stopwords(&quot;en&quot;),
                     &quot;Stopword&quot;, &quot;&quot;),   stringsAsFactors=FALSE)
 dtm &lt;- dtm[, !colnames(dtm) %in% stopwords(&quot;en&quot;)]
 attr(dtm, &quot;dictionary&quot;) &lt;- dictionary
 rm(dictionary)
-meta(corpus, type=&quot;corpus&quot;, tag=&quot;language&quot;) &lt;- 
+meta(corpus, type=&quot;corpus&quot;, tag=&quot;language&quot;) &lt;-
     attr(dtm, &quot;language&quot;) &lt;- &quot;en&quot;
-meta(corpus, type=&quot;corpus&quot;, tag=&quot;processing&quot;) &lt;- 
-    attr(dtm, &quot;processing&quot;) &lt;- c(lowercase=TRUE, punctuation=TRUE, 
-                    digits=TRUE, stopwords=TRUE, stemming=FALSE, 
-                    customStemming=FALSE, twitter=FALSE, 
+meta(corpus, type=&quot;corpus&quot;, tag=&quot;processing&quot;) &lt;-
+    attr(dtm, &quot;processing&quot;) &lt;- c(lowercase=TRUE, punctuation=TRUE,
+                    digits=TRUE, stopwords=TRUE, stemming=FALSE,
+                    customStemming=FALSE, twitter=FALSE,
                     removeHashtags=NA, removeNames=NA)
 corpus</code></pre>
 <pre><code>## &lt;&lt;VCorpus&gt;&gt;
@@ -197,7 +2495,7 @@ corpus</code></pre>
 ## Maximal term length: 24
 ## Weighting          : term frequency (tf)</code></pre>
 <p>In the second step, I first collect all search terms that still have different orthography. Second, I group them together according to the overarching topics of <code>Science</code>, <code>Training</code>, and <code>Advise</code>.</p>
-<pre class="r"><code>terms &lt;- as.data.frame(as.matrix(dtm)) 
+<pre class="r"><code>terms &lt;- as.data.frame(as.matrix(dtm))
 terms$Year &lt;- 1997:2011
 
 ## combine relevant terms
@@ -205,9 +2503,9 @@ terms$WORKSHOP &lt;- terms$workshop + terms$workshops + terms$workshopin
 terms$SEMINAR &lt;- terms$seminar + terms$seminars +terms$seminarfrom
 terms$TRAINING &lt;- terms$training
 terms$MEETING &lt;- terms$meeting + terms$meetings
-terms$COURSE &lt;- terms$course + terms$courseswere + 
-    terms$coursebefore + terms$coursefor + terms$courses + 
-    terms$courseswere 
+terms$COURSE &lt;- terms$course + terms$courseswere +
+    terms$coursebefore + terms$coursefor + terms$courses +
+    terms$courseswere
 terms$PANEL &lt;- terms$panelists
 terms$SYMPOSIA &lt;- terms$symposium
 terms$NETWORK &lt;- terms$network
@@ -221,12 +2519,629 @@ terms$GROUP_ADVICE &lt;- terms$MEETING + terms$NETWORK + terms$ADVISOR
 
 write.csv(terms, file = &quot;coding_terms_opcw.csv&quot;)
 
-terms2 &lt;- terms %&gt;% select(Year, WORKSHOP, SEMINAR, TRAINING, 
-                    MEETING, COURSE, PANEL, SYMPOSIA, NETWORK, 
+terms2 &lt;- terms %&gt;% select(Year, WORKSHOP, SEMINAR, TRAINING,
+                    MEETING, COURSE, PANEL, SYMPOSIA, NETWORK,
                     GROUP_SCIENCE, GROUP_TRAINING, GROUP_ADVICE)
 write.csv(terms2, file = &quot;opcw-participation-events.csv&quot;)</code></pre>
-% latex table generated in R 3.2.2 by xtable 1.7-4 package % Sun Sep 20 22:55:48 2015
-
+<!-- html table generated in R 3.2.2 by xtable 1.7-4 package -->
+<!-- Mon Sep 21 17:21:40 2015 -->
+<table border="1">
+<tr>
+<th>
+Year
+</th>
+<th>
+WORKSHOP
+</th>
+<th>
+SEMINAR
+</th>
+<th>
+TRAINING
+</th>
+<th>
+MEETING
+</th>
+<th>
+COURSE
+</th>
+<th>
+PANEL
+</th>
+<th>
+SYMPOSIA
+</th>
+<th>
+NETWORK
+</th>
+<th>
+GROUP_SCIENCE
+</th>
+<th>
+GROUP_TRAINING
+</th>
+<th>
+GROUP_ADVICE
+</th>
+</tr>
+<tr>
+<td align="right">
+1997
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+2
+</td>
+</tr>
+<tr>
+<td align="right">
+1998
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+11
+</td>
+</tr>
+<tr>
+<td align="right">
+1999
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+25
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+54
+</td>
+<td align="right">
+15
+</td>
+</tr>
+<tr>
+<td align="right">
+2000
+</td>
+<td align="right">
+18
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+22
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+61
+</td>
+<td align="right">
+19
+</td>
+</tr>
+<tr>
+<td align="right">
+2001
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+31
+</td>
+<td align="right">
+17
+</td>
+</tr>
+<tr>
+<td align="right">
+2002
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+35
+</td>
+<td align="right">
+12
+</td>
+</tr>
+<tr>
+<td align="right">
+2003
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+6
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+21
+</td>
+<td align="right">
+16
+</td>
+</tr>
+<tr>
+<td align="right">
+2004
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+30
+</td>
+<td align="right">
+14
+</td>
+</tr>
+<tr>
+<td align="right">
+2005
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+5
+</td>
+<td align="right">
+10
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+34
+</td>
+<td align="right">
+8
+</td>
+</tr>
+<tr>
+<td align="right">
+2006
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+7
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+33
+</td>
+<td align="right">
+9
+</td>
+</tr>
+<tr>
+<td align="right">
+2007
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+29
+</td>
+<td align="right">
+6
+</td>
+</tr>
+<tr>
+<td align="right">
+2008
+</td>
+<td align="right">
+13
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+2
+</td>
+<td align="right">
+36
+</td>
+<td align="right">
+11
+</td>
+</tr>
+<tr>
+<td align="right">
+2009
+</td>
+<td align="right">
+16
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+15
+</td>
+<td align="right">
+17
+</td>
+<td align="right">
+19
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+3
+</td>
+<td align="right">
+50
+</td>
+<td align="right">
+20
+</td>
+</tr>
+<tr>
+<td align="right">
+2010
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+20
+</td>
+<td align="right">
+12
+</td>
+<td align="right">
+27
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+4
+</td>
+<td align="right">
+59
+</td>
+<td align="right">
+15
+</td>
+</tr>
+<tr>
+<td align="right">
+2011
+</td>
+<td align="right">
+11
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+8
+</td>
+<td align="right">
+14
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+0
+</td>
+<td align="right">
+1
+</td>
+<td align="right">
+9
+</td>
+<td align="right">
+39
+</td>
+<td align="right">
+11
+</td>
+</tr>
+</table>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>HUANG, Ronggui (2014). RQDA: R-based Qualitative Data Analysis. R package version 0.2-7. URL <a href="http://rqda.r-forge.r-project.org/" class="uri">http://rqda.r-forge.r-project.org/</a>.<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>David B. Dahl (2014). xtable: Export tables to LaTeX or HTML. R package version 1.7-4. <a href="http://CRAN.R-project.org/package=xtable" class="uri">http://CRAN.R-project.org/package=xtable</a>. Ingo Feinerer and Kurt Hornik (2014). tm: Text Mining Package. R package version 0.6. <a href="http://CRAN.R-project.org/package=tm" class="uri">http://CRAN.R-project.org/package=tm</a>. Kurt Hornik, David Meyer and Christian Buchta (2014). slam: Sparse Lightweight Arrays and Matrices. R package version 0.1-32. <a href="http://CRAN.R-project.org/package=slam" class="uri">http://CRAN.R-project.org/package=slam</a>. Hadley Wickham and Romain Francois (2014). dplyr: A Grammar of Data Manipulation. R package version 0.3.0.2. <a href="http://CRAN.R-project.org/package=dplyr" class="uri">http://CRAN.R-project.org/package=dplyr</a>. Hadley Wickham (2009) ggplot2: elegant graphics for data analysis. Springer New York, 2009. Hadley Wickham (2007). Reshaping Data with the reshape Package. Journal of Statistical Software, 21(12), 1-2.<a href="#fnref2">↩</a></p></li>
+</ol>
 </div>
 
 
