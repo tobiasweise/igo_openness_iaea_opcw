@@ -50,5 +50,4 @@ The data in the repository is organized as follows:
    - [ch6.Rmd](figures/ch6.Rmd) includes the code and the figures for Chapter 6: "Case Studies on Organizational Opening and Causal Mechanisms"
 
 
-
 [![DOI](https://zenodo.org/badge/18422/tobiasweise/igo_openness_iaea_opcw.svg)](https://zenodo.org/badge/latestdoi/18422/tobiasweise/igo_openness_iaea_opcw)
