@@ -1,8 +1,6 @@
-# Explaining the Variation in the Openness of Intergovernmental Security Organizations. The International Atomic Energy Agency and the Organization for the Prohibition of Chemical Weapons
+# Participation and Transparency in Intergovernmental Security Organizations. Resource and Norm Driven Opening in the IAEA and OPCW
 
-This is the data repository for my dissertation *"Explaining the Variation in the
-Openness of Intergovernmental Security Organizations. The International Atomic
-Energy Agency and the Organization for the Prohibition of Chemical Weapons."*
+This is the data repository for my dissertation *"Participation and Transparency in Intergovernmental Security Organizations. Resource and Norm Driven Opening in the IAEA and OPCW."*
 The purpose of this repository is to make my results reproducible and to make
 my data available to other researchers.
 
